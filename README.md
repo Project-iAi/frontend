@@ -1,97 +1,118 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# FrontendRNiOS - AI 친구와 대화하는 그림일기 앱
 
-# Getting Started
+아이와 AI 캐릭터가 대화하며 그림일기를 만들어주는 React Native 앱입니다.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## 🎯 주요 기능
 
-## Step 1: Start Metro
+- **온보딩**: 서비스 소개 및 시작
+- **회원가입**: 아이와 보호자 정보 입력
+- **컨셉 선택**: 우주, 밭, 학교 중 선택
+- **캐릭터 선택**: 각 컨셉별 3개 캐릭터 중 선택
+- **감정 선택**: 기쁨, 슬픔, 화남 중 선택
+- **대화**: AI 캐릭터와 실시간 대화
+- **그림일기**: 대화를 바탕으로 한 그림일기 생성
+- **결과 모음**: 모든 그림일기 모음
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## 🛠 기술 스택
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- **React Native** 0.80.2
+- **TypeScript**
+- **Zustand** (상태관리)
+- **iOS Simulator** / **Android Emulator**
 
-```sh
-# Using npm
+## 🚀 시작하기
+
+### 필수 요구사항
+
+- Node.js 18+
+- React Native CLI
+- Xcode (iOS 개발용)
+- Android Studio (Android 개발용)
+
+### 설치 및 실행
+
+1. **의존성 설치**
+```bash
+npm install
+```
+
+2. **iOS 의존성 설치**
+```bash
+cd ios && bundle install && bundle exec pod install && cd ..
+```
+
+3. **Metro 서버 시작**
+```bash
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Build and run your app
+4. **앱 실행**
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+**iOS:**
+```bash
+npx react-native run-ios
 ```
 
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+**Android:**
+```bash
+npx react-native run-android
 ```
 
-Then, and every time you update your native dependencies, run:
+## 📁 프로젝트 구조
 
-```sh
-bundle exec pod install
+```
+src/
+├── components/          # 화면 컴포넌트들
+│   ├── OnboardingScreen.tsx
+│   ├── SignupScreen.tsx
+│   ├── ConceptScreen.tsx
+│   ├── CharacterScreen.tsx
+│   ├── EmotionScreen.tsx
+│   ├── ConversationScreen.tsx
+│   ├── DiaryScreen.tsx
+│   └── CollectionScreen.tsx
+├── store/              # Zustand 상태관리
+│   └── useAppStore.ts
+├── types/              # TypeScript 타입 정의
+│   └── index.ts
+├── utils/              # 유틸리티 및 데이터
+│   ├── constants.ts
+│   └── data.ts
+└── assets/             # 이미지 및 리소스
+    ├── images/
+    └── index.ts
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+## 🎨 개발 가이드
 
-```sh
-# Using npm
-npm run ios
+### 이미지 추가
 
-# OR using Yarn
-yarn ios
-```
+이미지는 `src/assets/images/` 폴더에 추가하고 `src/assets/index.ts`에서 export하세요.
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+### 상태 관리
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+Zustand를 사용하여 앱의 전체 상태를 관리합니다. `src/store/useAppStore.ts`에서 확인할 수 있습니다.
 
-## Step 3: Modify your app
+### 타입 정의
 
-Now that you have successfully run the app, let's make changes!
+모든 타입은 `src/types/index.ts`에 정의되어 있습니다.
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+## 📱 화면 플로우
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+1. **온보딩** → 2. **회원가입** → 3. **컨셉 선택** → 4. **캐릭터 선택** → 5. **감정 선택** → 6. **대화** → 7. **그림일기** → 8. **결과 모음**
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+## 🤝 기여하기
 
-## Congratulations! :tada:
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-You've successfully run and modified your React Native App. :partying_face:
+## 📄 라이선스
 
-### Now what?
+이 프로젝트는 MIT 라이선스 하에 배포됩니다.
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+## 👥 팀
 
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+- **Project iAi** - AI 친구와 대화하는 그림일기 앱 개발
