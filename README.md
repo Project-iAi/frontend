@@ -108,11 +108,8 @@ Zustand를 사용하여 앱의 전체 상태를 관리합니다. `src/store/useA
 3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
-
-## 📄 라이선스
-
-이 프로젝트는 MIT 라이선스 하에 배포됩니다.
+   
 
 ## 👥 팀
 
-- **Project iAi** - AI 친구와 대화하는 그림일기 앱 개발
+- **Project iAi** - 
