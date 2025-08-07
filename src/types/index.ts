@@ -2,7 +2,9 @@
 export interface Child {
   id: string;
   name: string;
+  gender: 'male' | 'female' | 'none';
   age: number;
+  interests: string[];
 }
 
 export interface Parent {
