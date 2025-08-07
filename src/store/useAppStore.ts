@@ -54,10 +54,12 @@ export const useAppStore = create<AppStore>((set) => ({
   },
 
   setSelectedCharacter: (character) => {
+    console.log('setSelectedCharacter called with:', character);
     set({ selectedCharacter: character });
   },
 
   setSelectedEmotion: (emotion) => {
+    console.log('setSelectedEmotion called with:', emotion);
     set({ selectedEmotion: emotion });
   },
 
