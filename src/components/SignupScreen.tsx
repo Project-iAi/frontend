@@ -111,6 +111,14 @@ const SignupScreen = () => {
                 value={childName}
                 onChangeText={setChildName}
                 placeholderTextColor="#999"
+                autoComplete="off"
+                autoCorrect={false}
+                autoCapitalize="none"
+                textContentType="none"
+                keyboardType="default"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                multiline={false}
               />
             </View>
 
@@ -179,6 +187,14 @@ const SignupScreen = () => {
                 value={parentName}
                 onChangeText={setParentName}
                 placeholderTextColor="#999"
+                autoComplete="off"
+                autoCorrect={false}
+                autoCapitalize="none"
+                textContentType="none"
+                keyboardType="default"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                multiline={false}
               />
             </View>
 
@@ -193,6 +209,11 @@ const SignupScreen = () => {
                 onSubmitEditing={handleInterestSubmit}
                 placeholderTextColor="#999"
                 returnKeyType="done"
+                autoComplete="off"
+                autoCorrect={false}
+                autoCapitalize="none"
+                textContentType="none"
+                keyboardType="default"
               />
               {interestTags.length > 0 && (
                 <View style={styles.tagsContainer}>

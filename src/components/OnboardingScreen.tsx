@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   ImageBackground,
   Image,
+  Alert,
 } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { SIZES } from '../utils/constants';
@@ -16,48 +17,66 @@ const OnboardingScreen = () => {
   const { setCurrentStep } = useAppStore();
 
   const handleStart = () => {
-    setCurrentStep('signup');
+    try {
+      setCurrentStep('signup');
+    } catch (error) {
+      console.error('Error navigating to signup:', error);
+      Alert.alert('오류', '화면 이동 중 오류가 발생했습니다.');
+    }
   };
 
   const handleViewRecords = () => {
-    setCurrentStep('collection');
+    try {
+      setCurrentStep('collection');
+    } catch (error) {
+      console.error('Error navigating to collection:', error);
+      Alert.alert('오류', '화면 이동 중 오류가 발생했습니다.');
+    }
   };
 
   return (
-    <ImageBackground 
-      source={images.backgrounds.main} 
-      style={styles.container}
-      resizeMode="cover"
-    >
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.content}>
-          {/* 로고 */}
-          <View style={styles.logoContainer}>
-            <Image 
-              source={images.logos.iai} 
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
+    <View style={styles.container}>
+      <ImageBackground 
+        source={images.backgrounds.main} 
+        style={styles.backgroundImage}
+        resizeMode="cover"
+        onError={(error) => console.error('Image loading error:', error)}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.content}>
+            {/* 로고 */}
+            <View style={styles.logoContainer}>
+              <Image 
+                source={images.logos.iai} 
+                style={styles.logo}
+                resizeMode="contain"
+                onError={(error) => console.error('Logo loading error:', error)}
+              />
+            </View>
 
-          {/* 버튼들 */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.startButton} onPress={handleStart}>
-              <Text style={styles.startButtonText}>시작하기</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.recordsButton} onPress={handleViewRecords}>
-              <Text style={styles.recordsButtonText}>기록 보러가기</Text>
-            </TouchableOpacity>
+            {/* 버튼들 */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.startButton} onPress={handleStart}>
+                <Text style={styles.startButtonText}>시작하기</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.recordsButton} onPress={handleViewRecords}>
+                <Text style={styles.recordsButtonText}>기록 보러가기</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </SafeAreaView>
-    </ImageBackground>
+        </SafeAreaView>
+      </ImageBackground>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#F0F8FF', // 배경색 추가
+  },
+  backgroundImage: {
     flex: 1,
   },
   safeArea: {
@@ -73,24 +92,24 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: SIZES.sm, // 더 위로 올림
+    marginTop: SIZES.sm,
   },
   logo: {
-    width: 600, // 200 * 3 = 600
-    height: 400, // 360에서 400으로 증가
+    width: 600,
+    height: 400,
   },
   buttonContainer: {
     width: '100%',
     alignItems: 'center',
     paddingHorizontal: SIZES.xl,
     paddingBottom: SIZES.xl,
-    marginTop: -SIZES.xl * 2, // 버튼들을 더 위로 올림
+    marginTop: -SIZES.xl * 2,
   },
   startButton: {
-    backgroundColor: '#FFB6C1', // 핑크색
+    backgroundColor: '#FFB6C1',
     paddingHorizontal: SIZES.xl * 2,
     paddingVertical: SIZES.lg,
-    borderRadius: 50, // 타원형
+    borderRadius: 50,
     marginBottom: SIZES.lg,
     shadowColor: '#000',
     shadowOffset: {
@@ -98,22 +117,21 @@ const styles = StyleSheet.create({
       height: 2,
     },
     shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowRadius: 4,
     elevation: 5,
   },
   startButtonText: {
-    color: '#000000',
+    color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
     textAlign: 'center',
   },
   recordsButton: {
     paddingVertical: SIZES.sm,
   },
   recordsButtonText: {
-    color: '#000000',
+    color: '#FFFFFF',
     fontSize: 16,
-    textAlign: 'center',
     textDecorationLine: 'underline',
   },
 });

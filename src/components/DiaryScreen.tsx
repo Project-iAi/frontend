@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,174 +6,286 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  ActivityIndicator,
+  ImageBackground,
+  Dimensions,
 } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
-import { COLORS, SIZES } from '../utils/constants';
+import { SIZES } from '../utils/constants';
+import { images } from '../assets';
+
+const { height: screenHeight } = Dimensions.get('window');
 
 const DiaryScreen = () => {
-  const { 
-    currentConversation, 
-    selectedCharacter, 
+  const {
+    currentConversation,
+    selectedCharacter,
     selectedEmotion,
     user,
-    addDiaryEntry,
-    setCurrentStep 
+    setCurrentStep,
   } = useAppStore();
 
-  const [isGenerating, setIsGenerating] = useState(true);
-  const [diaryContent, setDiaryContent] = useState('');
-
-  useEffect(() => {
-    // 그림일기 생성 시뮬레이션
-    setTimeout(() => {
-      if (currentConversation && selectedCharacter && selectedEmotion && user) {
-        const emotionText = {
-          happy: '기쁜',
-          sad: '슬픈',
-          angry: '화난',
-        }[selectedEmotion];
-
-        const content = `${user.child.name}는 오늘 ${emotionText} 마음으로 ${selectedCharacter.name}와 함께 이야기를 나누었어요. 
-        
-${currentConversation.messages
-  .filter(msg => msg.sender === 'user')
-  .map(msg => msg.content)
-  .join(' ')}라는 이야기를 나누며 서로의 마음을 이해했답니다.
-
-이런 소중한 대화를 통해 ${user.child.name}는 더욱 성장할 수 있었어요.`;
-
-        setDiaryContent(content);
-        setIsGenerating(false);
-
-        // 일기 항목 저장
-        const diaryEntry = {
-          id: Date.now().toString(),
-          conversationId: currentConversation.id,
-          title: `${selectedCharacter.name}와의 대화`,
-          content,
-          createdAt: new Date(),
-        };
-        addDiaryEntry(diaryEntry);
-      }
-    }, 3000);
-  }, [currentConversation, selectedCharacter, selectedEmotion, user, addDiaryEntry]);
-
-  const handleViewCollection = () => {
+  const handleBack = () => {
     setCurrentStep('collection');
   };
 
-  const handleNewConversation = () => {
-    setCurrentStep('concept');
+  const formatTextToNotebook = (text: string, charsPerLine: number = 18) => {
+    const words = text.split('');
+    const lines = [];
+    
+    for (let i = 0; i < words.length; i += charsPerLine) {
+      const line = words.slice(i, i + charsPerLine).join('');
+      lines.push(line);
+    }
+    
+    return lines;
+  };
+
+  const getCurrentDate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+    return `${year}년 ${month}월 ${day}일`;
   };
 
   if (!currentConversation || !selectedCharacter || !user) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.errorText}>대화 정보가 없습니다</Text>
-      </SafeAreaView>
+      <ImageBackground 
+        source={images.backgrounds.main} 
+        style={styles.container}
+        resizeMode="cover"
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>일기 정보가 없습니다</Text>
+            <TouchableOpacity style={styles.errorBackButton} onPress={handleBack}>
+              <Text style={styles.errorBackButtonText}>뒤로가기</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </ImageBackground>
     );
   }
 
+  // 일기 내용 생성
+  const emotionText = {
+    happy: '기쁜',
+    sad: '슬픈',
+    angry: '화난',
+  }[selectedEmotion || 'happy'];
+
+  const diaryContent = `${user.child.name}는 오늘 ${emotionText} 마음으로 ${selectedCharacter.name}와 함께 이야기를 나누었어요. ${currentConversation.messages
+    .filter(msg => msg.sender === 'user')
+    .map(msg => msg.content)
+    .join(' ')}라는 이야기를 나누며 서로의 마음을 이해했답니다. 이런 소중한 대화를 통해 ${user.child.name}는 더욱 성장할 수 있었어요.`;
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>그림일기가 완성되었어요! 🎨</Text>
-        
-        {isGenerating ? (
-          <View style={styles.generatingContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.generatingText}>그림일기를 만들고 있어요...</Text>
-          </View>
-        ) : (
-          <View style={styles.diaryContainer}>
-            <Text style={styles.diaryTitle}>{selectedCharacter.name}와의 대화</Text>
-            <Text style={styles.diaryContent}>{diaryContent}</Text>
-            
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.collectionButton} onPress={handleViewCollection}>
-                <Text style={styles.buttonText}>모음 보기</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.newButton} onPress={handleNewConversation}>
-                <Text style={styles.buttonText}>새로운 대화</Text>
-              </TouchableOpacity>
+    <ImageBackground 
+      source={images.backgrounds.main} 
+      style={styles.container}
+      resizeMode="cover"
+    >
+      <SafeAreaView style={styles.safeArea}>
+        {/* 우측 상단 돌아가기 버튼 */}
+        <TouchableOpacity style={styles.returnButton} onPress={handleBack}>
+          <Text style={styles.returnButtonText}>돌아가기</Text>
+        </TouchableOpacity>
+
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.diaryCard}>
+            {/* 날짜 영역 */}
+            <View style={styles.dateContainer}>
+              <Text style={styles.dateText}>{getCurrentDate()}</Text>
+            </View>
+
+            {/* 그림 영역 */}
+            <View style={styles.illustrationContainer}>
+              <View style={styles.illustrationBox}>
+                <View style={styles.cloudContainer}>
+                  <Text style={styles.cloudEmoji}>☁️</Text>
+                </View>
+                <View style={styles.characterContainer}>
+                  <Text style={styles.characterEmoji}>🐻</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* 일기 내용 영역 */}
+            <View style={styles.contentContainer}>
+              <View style={styles.notebookLines}>
+                {formatTextToNotebook(diaryContent).map((line, index) => (
+                  <View key={index} style={styles.lineContainer}>
+                    <Text style={styles.diaryContent}>{line}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
           </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+  },
+  safeArea: {
+    flex: 1,
   },
   content: {
-    padding: SIZES.lg,
     flexGrow: 1,
+    paddingHorizontal: SIZES.lg,
+    paddingVertical: SIZES.xl,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: SIZES.xl,
-    color: COLORS.text,
-  },
-  generatingContainer: {
-    flex: 1,
+  backButton: {
+    position: 'absolute',
+    top: SIZES.lg,
+    left: SIZES.lg,
+    zIndex: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 25,
+    width: 50,
+    height: 50,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
-  generatingText: {
+  backButtonText: {
+    fontSize: 24,
+    color: '#333333',
+  },
+  diaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: SIZES.xl,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+    minHeight: screenHeight * 0.7,
+  },
+  dateContainer: {
+    marginBottom: SIZES.lg,
+  },
+  dateText: {
     fontSize: 18,
-    marginTop: SIZES.md,
-    color: COLORS.textSecondary,
+    fontWeight: '600',
+    color: '#333333',
   },
-  diaryContainer: {
+  illustrationContainer: {
+    marginBottom: SIZES.lg,
+  },
+  illustrationBox: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 15,
+    padding: SIZES.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: 180,
+  },
+  cloudContainer: {
     flex: 1,
+    alignItems: 'center',
   },
-  diaryTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: SIZES.md,
-    color: COLORS.text,
+  cloudEmoji: {
+    fontSize: 50,
+  },
+  characterContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  characterEmoji: {
+    fontSize: 50,
+  },
+  contentContainer: {
+    flex: 1,
+    backgroundColor: '#FFF5F5',
+    borderRadius: 15,
+    padding: SIZES.lg,
+    marginBottom: SIZES.lg,
+    minHeight: 200,
+  },
+  notebookLines: {
+    flex: 1,
+    backgroundColor: '#FFF5F5',
+    borderRadius: 15,
+  },
+  lineContainer: {
+    minHeight: 30,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    paddingVertical: 8,
+    marginBottom: 4,
+    paddingHorizontal: 8,
+    width: '100%',
   },
   diaryContent: {
     fontSize: 16,
     lineHeight: 24,
-    color: COLORS.text,
-    marginBottom: SIZES.xl,
+    color: '#333333',
+    textAlign: 'left',
+    flexWrap: 'wrap',
+    width: '100%',
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: SIZES.xl,
-  },
-  collectionButton: {
-    backgroundColor: COLORS.secondary,
-    paddingHorizontal: SIZES.lg,
-    paddingVertical: SIZES.md,
-    borderRadius: SIZES.sm,
-  },
-  newButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SIZES.lg,
-    paddingVertical: SIZES.md,
-    borderRadius: SIZES.sm,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SIZES.xl,
   },
   errorText: {
     fontSize: 18,
     textAlign: 'center',
-    color: COLORS.error,
-    marginTop: SIZES.xl,
+    color: '#FF6B6B',
+    marginBottom: SIZES.lg,
+  },
+  errorBackButton: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: SIZES.lg,
+    paddingVertical: SIZES.md,
+    borderRadius: 25,
+  },
+  errorBackButtonText: {
+    color: '#333333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  returnButton: {
+    position: 'absolute',
+    top: SIZES.xl * 2,
+    right: SIZES.lg,
+    zIndex: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 25,
+    paddingHorizontal: SIZES.md,
+    paddingVertical: SIZES.sm,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  returnButtonText: {
+    color: '#333333',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

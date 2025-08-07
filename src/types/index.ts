@@ -68,8 +68,9 @@ export interface DiaryEntry {
   conversationId: string;
   title: string;
   content: string;
-  imageUrl?: string;
   createdAt: Date;
+  concept: ConceptType;
+  time?: string; // 시간 정보 (선택적)
 }
 
 // 앱 상태 관련 타입

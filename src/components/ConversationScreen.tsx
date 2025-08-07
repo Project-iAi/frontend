@@ -26,14 +26,8 @@ const ConversationScreen = () => {
     selectedConcept,
     user,
     currentConversation,
-    setCurrentConversation,
-    addConversation,
-    addMessage,
     setCurrentStep 
   } = useAppStore();
-
-  const [inputText, setInputText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
 
   // 배경 이미지 가져오기
   const getBackground = () => {
@@ -54,135 +48,36 @@ const ConversationScreen = () => {
     if (!selectedCharacter) return null;
     
     const characterMap: { [key: string]: any } = {
-      'ham_1': images.allCharacters.ham.variant,
-      'fox_1': images.allCharacters.fox.variant,
-      'lion_1': images.allCharacters.lion.variant,
-      'chick_1': images.allCharacters.chick.variant,
-      'dog_1': images.allCharacters.dog.variant,
-      'cat_1': images.allCharacters.cat.variant,
-      'rabbit_1': images.allCharacters.rabbit.variant,
-      'rac_1': images.allCharacters.rac.variant,
-      'bear_1': images.allCharacters.bear.variant,
+      'ham': images.allCharacters.ham.variant,
+      'fox': images.allCharacters.fox.variant,
+      'lion': images.allCharacters.lion.variant,
+      'chick': images.allCharacters.chick.variant,
+      'dog': images.allCharacters.dog.variant,
+      'cat': images.allCharacters.cat.variant,
+      'rabbit': images.allCharacters.rabbit.variant,
+      'rac': images.allCharacters.rac.variant,
+      'bear': images.allCharacters.bear.variant,
     };
     
     return characterMap[selectedCharacter.id] || images.allCharacters.ham.variant;
   };
 
-  useEffect(() => {
-    if (selectedCharacter && !currentConversation) {
-      // 새로운 대화 시작
-      const newConversation = {
-        id: Date.now().toString(),
-        characterId: selectedCharacter.id,
-        emotion: selectedEmotion!,
-        messages: [],
-        createdAt: new Date(),
-      };
-      setCurrentConversation(newConversation);
-      addConversation(newConversation);
-
-      // 캐릭터 인사말 추가
-      setTimeout(() => {
-        const greeting = characterGreetings[selectedCharacter.id as keyof typeof characterGreetings] || '안녕하세요!';
-        const greetingMessage = {
-          id: Date.now().toString(),
-          sender: 'character' as const,
-          content: greeting,
-          timestamp: new Date(),
-        };
-        addMessage(greetingMessage);
-      }, 1000);
-    }
-  }, [selectedCharacter, selectedEmotion, currentConversation, setCurrentConversation, addConversation, addMessage]);
-
-  const handleSendMessage = () => {
-    if (!inputText.trim()) return;
-
-    const userMessage = {
-      id: Date.now().toString(),
-      sender: 'user' as const,
-      content: inputText,
-      timestamp: new Date(),
-    };
-
-    addMessage(userMessage);
-    setInputText('');
-    setIsTyping(true);
-
-    // AI 응답 시뮬레이션
-    setTimeout(() => {
-      const responses = [
-        '정말 흥미로운 이야기네요!',
-        '그렇군요, 더 자세히 들려주세요.',
-        '와, 정말 멋져요!',
-        '그런 일이 있었군요.',
-        '정말 대단해요!',
-      ];
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      
-      const aiMessage = {
-        id: (Date.now() + 1).toString(),
-        sender: 'character' as const,
-        content: randomResponse,
-        timestamp: new Date(),
-      };
-      
-      addMessage(aiMessage);
-      setIsTyping(false);
-    }, 1500);
-  };
-
-  const handleEndConversation = () => {
-    Alert.alert(
-      '대화 종료',
-      '대화를 마치고 그림일기를 만들어볼까요?',
-      [
-        { text: '취소', style: 'cancel' },
-        { text: '확인', onPress: () => setCurrentStep('diary') }
-      ]
-    );
-  };
-
   const handleBack = () => {
-    setCurrentStep('character');
+    setCurrentStep('collection');
   };
 
-  if (!selectedCharacter || !selectedEmotion) {
-    console.log('=== ConversationScreen Debug ===');
-    console.log('selectedCharacter:', selectedCharacter);
-    console.log('selectedEmotion:', selectedEmotion);
-    console.log('user:', user);
-    console.log('selectedConcept:', selectedConcept);
-    console.log('Type of selectedCharacter:', typeof selectedCharacter);
-    console.log('Type of selectedEmotion:', typeof selectedEmotion);
-    console.log('Type of user:', typeof user);
-    console.log('===============================');
-    
-    let errorMessage = '정보가 누락되었습니다';
-    if (!selectedCharacter) errorMessage += '\n- 캐릭터가 선택되지 않았습니다';
-    if (!selectedEmotion) errorMessage += '\n- 감정이 선택되지 않았습니다';
-    
+  if (!currentConversation || !selectedCharacter || !user) {
     return (
       <ImageBackground 
-        source={getBackground()} 
+        source={images.backgrounds.main} 
         style={styles.container}
         resizeMode="cover"
       >
         <SafeAreaView style={styles.safeArea}>
-          {/* 뒤로가기 버튼 */}
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-          
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{errorMessage}</Text>
-            <Text style={styles.errorDebugText}>
-              Character: {selectedCharacter ? '있음' : '없음'}{'\n'}
-              Emotion: {selectedEmotion ? '있음' : '없음'}{'\n'}
-              User: {user ? '있음' : '없음'}
-            </Text>
+            <Text style={styles.errorText}>대화 정보가 없습니다</Text>
             <TouchableOpacity style={styles.errorBackButton} onPress={handleBack}>
-              <Text style={styles.errorBackButtonText}>캐릭터 선택으로 돌아가기</Text>
+              <Text style={styles.errorBackButtonText}>뒤로가기</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -197,9 +92,9 @@ const ConversationScreen = () => {
       resizeMode="cover"
     >
       <SafeAreaView style={styles.safeArea}>
-        {/* 뒤로가기 버튼 */}
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Text style={styles.backButtonText}>←</Text>
+        {/* 우측 상단 돌아가기 버튼 */}
+        <TouchableOpacity style={styles.returnButton} onPress={handleBack}>
+          <Text style={styles.returnButtonText}>돌아가기</Text>
         </TouchableOpacity>
 
         {/* 캐릭터 이미지 */}
@@ -234,33 +129,8 @@ const ConversationScreen = () => {
                 </Text>
               </View>
             ))}
-            {isTyping && (
-              <View style={[styles.messageContainer, styles.characterMessage]}>
-                <Text style={[styles.messageText, styles.characterMessageText]}>...</Text>
-              </View>
-            )}
           </ScrollView>
-
-          {/* 입력창 */}
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="메시지를 입력하세요..."
-              placeholderTextColor="#999"
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-            />
-            <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
-              <Text style={styles.sendButtonText}>전송</Text>
-            </TouchableOpacity>
-          </View>
         </View>
-
-        {/* 종료 버튼 */}
-        <TouchableOpacity style={styles.endButton} onPress={handleEndConversation}>
-          <Text style={styles.endButtonText}>종료</Text>
-        </TouchableOpacity>
       </SafeAreaView>
     </ImageBackground>
   );
@@ -284,8 +154,13 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   characterImage: {
-    width: screenWidth * 0.96,
-    height: screenWidth * 0.96,
+    width: 300,
+    height: 300,
+    position: 'absolute',
+    bottom: -60,
+    right: -50,
+    zIndex: 1,
+    backgroundColor: 'transparent',
   },
   chatContainer: {
     position: 'absolute',
@@ -405,6 +280,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: SIZES.lg,
     left: SIZES.lg,
+    zIndex: 10,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: SIZES.md,
     paddingVertical: SIZES.sm,
@@ -454,6 +330,31 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#666',
     marginTop: SIZES.md,
+  },
+  returnButton: {
+    position: 'absolute',
+    top: SIZES.xl * 2,
+    right: SIZES.lg,
+    zIndex: 10,
+    backgroundColor: '#FFB6C1',
+    paddingHorizontal: SIZES.md,
+    paddingVertical: SIZES.sm,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  returnButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

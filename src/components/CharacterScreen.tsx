@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,16 +6,18 @@ import {
   StyleSheet,
   SafeAreaView,
   ImageBackground,
-  Dimensions,
-  ScrollView,
   Image,
+  ScrollView,
   Modal,
+  Dimensions,
 } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { SIZES } from '../utils/constants';
 import { images } from '../assets';
 import { Character } from '../types';
 import { EmotionType } from '../types';
+import { Conversation } from '../types';
+import { characterGreetings } from '../utils/data';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = screenWidth * 0.4;
@@ -29,6 +31,7 @@ const CharacterScreen = () => {
     setSelectedEmotion,
     setCurrentStep,
     selectedEmotion: globalSelectedEmotion,
+    setCurrentConversation,
   } = useAppStore();
   const [currentIndex, setCurrentIndex] = useState(1);
   const [showEmotionModal, setShowEmotionModal] = useState(false);
@@ -221,6 +224,25 @@ const CharacterScreen = () => {
       
       // 전역 상태에 감정 설정
       setSelectedEmotion(emotionToSet as EmotionType);
+      
+      // 새로운 대화 생성
+      const newConversation: Conversation = {
+        id: Date.now().toString(),
+        characterId: character.id,
+        emotion: emotionToSet as EmotionType,
+        messages: [
+          {
+            id: '1',
+            sender: 'character' as const,
+            content: (characterGreetings as any)[character.id] || '안녕하세요! 오늘은 어떤 이야기를 나눠볼까요?',
+            timestamp: new Date(),
+          },
+        ],
+        createdAt: new Date(),
+      };
+      
+      // 현재 대화 설정
+      setCurrentConversation(newConversation);
       
       // 모달 닫기
       setShowEmotionModal(false);
