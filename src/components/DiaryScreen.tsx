@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,12 +20,25 @@ const DiaryScreen = () => {
     currentConversation,
     selectedCharacter,
     selectedEmotion,
+    selectedConcept,
     user,
     setCurrentStep,
+    addDiaryEntry,
   } = useAppStore();
+
+  const [isGenerating, setIsGenerating] = useState(true);
+  const [diaryContent, setDiaryContent] = useState('');
 
   const handleBack = () => {
     setCurrentStep('collection');
+  };
+
+  const handleViewCollection = () => {
+    setCurrentStep('collection');
+  };
+
+  const handleNewConversation = () => {
+    setCurrentStep('concept');
   };
 
   const formatTextToNotebook = (text: string, charsPerLine: number = 18) => {
@@ -48,6 +61,38 @@ const DiaryScreen = () => {
     return `${year}년 ${month}월 ${day}일`;
   };
 
+  useEffect(() => {
+    // 일기 생성 시뮬레이션
+    if (isGenerating && currentConversation && selectedCharacter && user) {
+      setTimeout(() => {
+        const emotionText = {
+          happy: '기쁜',
+          sad: '슬픈',
+          angry: '화난',
+        }[selectedEmotion || 'happy'];
+
+        const generatedContent = `${user.child.name}는 오늘 ${emotionText} 마음으로 ${selectedCharacter.name}와 함께 이야기를 나누었어요. ${currentConversation.messages
+          .filter(msg => msg.sender === 'user')
+          .map(msg => msg.content)
+          .join(' ')}라는 이야기를 나누며 서로의 마음을 이해했답니다. 이런 소중한 대화를 통해 ${user.child.name}는 더욱 성장할 수 있었어요.`;
+
+        setDiaryContent(generatedContent);
+        setIsGenerating(false);
+
+        // 일기 항목 추가
+        const diaryEntry = {
+          id: Date.now().toString(),
+          conversationId: currentConversation.id,
+          title: `${selectedCharacter.name}와의 대화`,
+          content: generatedContent,
+          createdAt: new Date(),
+          concept: selectedConcept!,
+        };
+        addDiaryEntry(diaryEntry);
+      }, 3000);
+    }
+  }, [isGenerating, currentConversation, selectedCharacter, selectedEmotion, user, selectedConcept, addDiaryEntry]);
+
   if (!currentConversation || !selectedCharacter || !user) {
     return (
       <ImageBackground 
@@ -67,17 +112,23 @@ const DiaryScreen = () => {
     );
   }
 
-  // 일기 내용 생성
-  const emotionText = {
-    happy: '기쁜',
-    sad: '슬픈',
-    angry: '화난',
-  }[selectedEmotion || 'happy'];
-
-  const diaryContent = `${user.child.name}는 오늘 ${emotionText} 마음으로 ${selectedCharacter.name}와 함께 이야기를 나누었어요. ${currentConversation.messages
-    .filter(msg => msg.sender === 'user')
-    .map(msg => msg.content)
-    .join(' ')}라는 이야기를 나누며 서로의 마음을 이해했답니다. 이런 소중한 대화를 통해 ${user.child.name}는 더욱 성장할 수 있었어요.`;
+  if (isGenerating) {
+    return (
+      <ImageBackground 
+        source={images.backgrounds.main} 
+        style={styles.container}
+        resizeMode="cover"
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.generatingContainer}>
+            <View style={styles.loadingCard}>
+              <Text style={styles.loadingText}>일기를 생성하고 있어요...</Text>
+            </View>
+          </View>
+        </SafeAreaView>
+      </ImageBackground>
+    );
+  }
 
   return (
     <ImageBackground 
@@ -86,11 +137,6 @@ const DiaryScreen = () => {
       resizeMode="cover"
     >
       <SafeAreaView style={styles.safeArea}>
-        {/* 우측 상단 돌아가기 버튼 */}
-        <TouchableOpacity style={styles.returnButton} onPress={handleBack}>
-          <Text style={styles.returnButtonText}>돌아가기</Text>
-        </TouchableOpacity>
-
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.diaryCard}>
             {/* 날짜 영역 */}
@@ -120,6 +166,16 @@ const DiaryScreen = () => {
                 ))}
               </View>
             </View>
+          </View>
+
+          {/* 버튼 영역 */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.newButton} onPress={handleNewConversation}>
+              <Text style={styles.newButtonText}>다시 놀러가기</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.collectionButton} onPress={handleViewCollection}>
+              <Text style={styles.collectionButtonText}>기록 보러가기</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -283,6 +339,66 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   returnButtonText: {
+    color: '#333333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  generatingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SIZES.lg,
+  },
+  loadingCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: SIZES.xl,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+    minHeight: screenHeight * 0.3,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333333',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: SIZES.lg,
+  },
+  newButton: {
+    backgroundColor: '#FFB6C1',
+    paddingHorizontal: SIZES.lg,
+    paddingVertical: SIZES.md,
+    borderRadius: 25,
+    flex: 1,
+    marginRight: SIZES.sm,
+    alignItems: 'center',
+  },
+  newButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  collectionButton: {
+    backgroundColor: '#FFFACD',
+    paddingHorizontal: SIZES.lg,
+    paddingVertical: SIZES.md,
+    borderRadius: 25,
+    flex: 1,
+    marginLeft: SIZES.sm,
+    alignItems: 'center',
+  },
+  collectionButtonText: {
     color: '#333333',
     fontSize: 16,
     fontWeight: '600',

@@ -26,8 +26,13 @@ const ConversationScreen = () => {
     selectedConcept,
     user,
     currentConversation,
-    setCurrentStep 
+    setCurrentStep,
+    addMessage,
+    setCurrentConversation
   } = useAppStore();
+
+  const [inputText, setInputText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
 
   // 배경 이미지 가져오기
   const getBackground = () => {
@@ -45,26 +50,93 @@ const ConversationScreen = () => {
 
   // 캐릭터 이미지 가져오기 (variant 버전 사용)
   const getCharacterImage = () => {
-    if (!selectedCharacter) return null;
+    if (!selectedCharacter) {
+      console.log('selectedCharacter is null');
+      return null;
+    }
+    
+    console.log('selectedCharacter:', selectedCharacter);
+    console.log('selectedCharacter.id:', selectedCharacter.id);
     
     const characterMap: { [key: string]: any } = {
-      'ham': images.allCharacters.ham.variant,
-      'fox': images.allCharacters.fox.variant,
-      'lion': images.allCharacters.lion.variant,
-      'chick': images.allCharacters.chick.variant,
-      'dog': images.allCharacters.dog.variant,
-      'cat': images.allCharacters.cat.variant,
-      'rabbit': images.allCharacters.rabbit.variant,
-      'rac': images.allCharacters.rac.variant,
-      'bear': images.allCharacters.bear.variant,
+      'ham_1': images.allCharacters.ham.variant,
+      'fox_1': images.allCharacters.fox.variant,
+      'lion_1': images.allCharacters.lion.variant,
+      'chick_1': images.allCharacters.chick.variant,
+      'dog_1': images.allCharacters.dog.variant,
+      'cat_1': images.allCharacters.cat.variant,
+      'rabbit_1': images.allCharacters.rabbit.variant,
+      'rac_1': images.allCharacters.rac.variant,
+      'bear_1': images.allCharacters.bear.variant,
     };
     
-    return characterMap[selectedCharacter.id] || images.allCharacters.ham.variant;
+    const image = characterMap[selectedCharacter.id] || images.allCharacters.ham.variant;
+    console.log('Selected image:', image);
+    return image;
   };
 
   const handleBack = () => {
-    setCurrentStep('collection');
+    setCurrentStep('character');
   };
+
+  const handleSendMessage = () => {
+    if (!inputText.trim()) return;
+
+    // 사용자 메시지 추가
+    const userMessage = {
+      id: Date.now().toString(),
+      sender: 'user' as const,
+      content: inputText.trim(),
+      timestamp: new Date(),
+    };
+    addMessage(userMessage);
+    setInputText('');
+
+    // AI 응답 시뮬레이션
+    setIsTyping(true);
+    setTimeout(() => {
+      const aiResponse = {
+        id: (Date.now() + 1).toString(),
+        sender: 'character' as const,
+        content: `${selectedCharacter?.name}가 "${inputText.trim()}"에 대해 대답하고 있어요!`,
+        timestamp: new Date(),
+      };
+      addMessage(aiResponse);
+      setIsTyping(false);
+    }, 2000);
+  };
+
+  const handleEndConversation = () => {
+    Alert.alert(
+      '대화 종료',
+      '대화를 종료하시겠습니까?',
+      [
+        {
+          text: '취소',
+          style: 'cancel',
+        },
+        {
+          text: '종료',
+          onPress: () => {
+            setCurrentStep('diary');
+          },
+        },
+      ]
+    );
+  };
+
+  useEffect(() => {
+    // 초기 대화 설정
+    if (currentConversation && currentConversation.messages.length === 0) {
+      const initialMessage = {
+        id: '1',
+        sender: 'character' as const,
+        content: (characterGreetings as any)[selectedCharacter?.id || 'ham'] || '안녕하세요! 오늘은 어떤 이야기를 나눠볼까요?',
+        timestamp: new Date(),
+      };
+      addMessage(initialMessage);
+    }
+  }, [currentConversation, selectedCharacter]);
 
   if (!currentConversation || !selectedCharacter || !user) {
     return (
@@ -92,44 +164,71 @@ const ConversationScreen = () => {
       resizeMode="cover"
     >
       <SafeAreaView style={styles.safeArea}>
-        {/* 우측 상단 돌아가기 버튼 */}
-        <TouchableOpacity style={styles.returnButton} onPress={handleBack}>
-          <Text style={styles.returnButtonText}>돌아가기</Text>
+        {/* 뒤로가기 버튼 */}
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <Text style={styles.backButtonText}>←</Text>
+        </TouchableOpacity>
+
+        {/* 종료 버튼 */}
+        <TouchableOpacity style={styles.endButton} onPress={handleEndConversation}>
+          <Text style={styles.endButtonText}>종료</Text>
         </TouchableOpacity>
 
         {/* 캐릭터 이미지 */}
-        <View style={styles.characterContainer}>
-          <Image 
-            source={getCharacterImage()}
-            style={styles.characterImage}
-            resizeMode="contain"
-          />
-        </View>
+        <Image 
+          source={getCharacterImage()} 
+          style={styles.characterImage}
+        />
 
-        {/* 채팅창 */}
+        {/* 채팅 창 */}
         <View style={styles.chatContainer}>
           <ScrollView 
-            style={styles.messagesContainer} 
-            contentContainerStyle={styles.messagesContent}
+            style={styles.messagesContainer}
             showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.messagesContent}
           >
-            {currentConversation?.messages.map((message) => (
-              <View
-                key={message.id}
+            {currentConversation.messages.map((message) => (
+              <View 
+                key={message.id} 
                 style={[
-                  styles.messageContainer,
-                  message.sender === 'user' ? styles.userMessage : styles.characterMessage,
+                  styles.messageBubble,
+                  message.sender === 'user' ? styles.userMessage : styles.characterMessage
                 ]}
               >
                 <Text style={[
                   styles.messageText,
-                  message.sender === 'user' ? styles.userMessageText : styles.characterMessageText,
+                  message.sender === 'user' ? styles.userMessageText : styles.characterMessageText
                 ]}>
                   {message.content}
                 </Text>
               </View>
             ))}
+            {isTyping && (
+              <View style={styles.typingContainer}>
+                <Text style={styles.typingText}>AI가 입력 중...</Text>
+              </View>
+            )}
           </ScrollView>
+
+          {/* 입력창 */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="메시지를 입력하세요..."
+              placeholderTextColor="#999"
+              multiline
+              maxLength={500}
+            />
+            <TouchableOpacity 
+              style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]} 
+              onPress={handleSendMessage}
+              disabled={!inputText.trim()}
+            >
+              <Text style={styles.sendButtonText}>전송</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     </ImageBackground>
@@ -154,11 +253,12 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   characterImage: {
-    width: 300,
-    height: 300,
+    width: 280,
+    height: 280,
     position: 'absolute',
-    bottom: -60,
-    right: -50,
+    top: screenHeight * 0.1,
+    left: '50%',
+    transform: [{ translateX: -140 }],
     zIndex: 1,
     backgroundColor: 'transparent',
   },
@@ -190,6 +290,10 @@ const styles = StyleSheet.create({
     paddingBottom: SIZES.lg,
   },
   messageContainer: {
+    marginBottom: SIZES.md,
+    maxWidth: '80%',
+  },
+  messageBubble: {
     marginBottom: SIZES.md,
     maxWidth: '80%',
   },
@@ -303,18 +407,17 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 18,
+    color: '#333333',
     textAlign: 'center',
-    color: '#FF6B6B',
-    marginTop: SIZES.xl * 3,
+    marginBottom: SIZES.lg,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: SIZES.lg,
+    paddingHorizontal: SIZES.xl,
   },
   errorBackButton: {
-    marginTop: SIZES.md,
     backgroundColor: '#FFB6C1',
     paddingHorizontal: SIZES.lg,
     paddingVertical: SIZES.md,
@@ -355,6 +458,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  typingContainer: {
+    alignSelf: 'center',
+    paddingVertical: SIZES.md,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 10,
+    marginTop: SIZES.md,
+  },
+  typingText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#D3D3D3',
+    opacity: 0.7,
   },
 });
 
