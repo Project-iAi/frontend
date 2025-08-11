@@ -52,67 +52,67 @@ const CharacterScreen = () => {
             id: 'ham_1', 
             name: '햄삐', 
             image: images.allCharacters.ham.normal,
-            description: '늘 활짝 웃고 작은 일에도 감탄할 줄 아는\n밝고 정 많은 친구 같은 성격을 가진 햄삐는 토성의 고리를 뛰어다니며\n친구들과 노는 걸 가장 좋아해요. 친구의 작은 변화도 먼저 눈치채고 다가가\n"괜찮아?"라고 묻는 다정함이 큰 장점이에요.'
+            description: '늘 활짝 웃고 밝은 햄삐는\n토성의 고리를 뛰어다니며\n친구들과 노는 걸 가장 좋아해요'
           },
           { 
             id: 'fox_1', 
             name: '여삐', 
             image: images.allCharacters.fox.normal,
-            description: '새로운 것을 보면 반드시 확인해야하는\n호기심과 용기를 가진 여삐는 달의 뒷면처럼 아무도 가지 않은 길을 찾아 모험하는 걸 즐겨요. 위험한 순간에도 눈을 반짝이며 나아갈 줄 아는 용기와\n실패해도 다시 도전하는 끈기가 강한 친구랍니다'
+            description: '새로운 일에 대한 호기심이 강한 여삐는\n나아갈 줄 아는 용기와\n다시 도전하는 끈기가 강한 친구랍니다'
           },
           { 
             id: 'lion_1', 
             name: '사삐', 
             image: images.allCharacters.lion.normal,
-            description: '느리지만 깊이 있게 말하는\n신뢰와 따뜻함을 주는 사삐는 태양 한가운데에서도 당당히 자리 잡고\n친구들의 이야기를 묵묵히 들어주는 존재예요. 무서운 상황에서도 침착하게 대처하는\n말투에 모두가 의지하죠.'
+            description: '신뢰와 따뜻함을 주는 사삐는 태양\n친구들의 이야기를 묵묵히 들어준답니다\n모두가 의지하는 든든한 존재에요'
           },
         ];
-      case 'school':
-        return [
-          { 
-            id: 'chick_1', 
-            name: '아리삐', 
-            image: images.allCharacters.chick.normal,
-            description: '"왜?"라는 질문을 끊임없이 던지고\n궁금한 건 꼭 직접 해봐야 직성이 풀리는 아리삐는 모든 수업 시간에 손을 제일 먼저 드는 병아리예요. 책상 위엔 항상 실험 도구가 잔뜩 놓여 있고\n실패해도 웃으면서 다시 시도해요.\n낙천적인 태도와 넘치는 호기심으로\n친구들에게 용기를 북돋아줘요.'
-          },
-          { 
-            id: 'dog_1', 
-            name: '멍삐', 
-            image: images.allCharacters.dog.normal,
-            description: '차분한 눈빛과 따뜻한 말투로 늘 주변을 편안하게 만드는\n깊이 있고 섬세한 멍삐는 감정에 공감하는 능력이 뛰어나\n친구들의 속마음을 단어 하나로 알아채요 고민을 글로 표현하게 도와주고\n조용히 어깨를 토닥이며 함께 울어주는 사람이기도 해요.'
-          },
-          { 
-            id: 'cat_1', 
-            name: '냥삐', 
-            image: images.allCharacters.cat.normal,
-            description: '감정이 표정과 목소리에 그대로 드러나고\n혼자 있어도 노래 부를 정도로 활달하고 외향적인 냥삐는 음악이 흐르는 곳이면 어디든 달려가\n춤추고 노래하는 고양이에요. 친구가 슬퍼 보이면 가볍게 기타를 치며 노래로 위로하고\n웃는 걸 보면 더 신나는 멜로디를 만들어요.'
-          },
-        ];
-      case 'farm':
-        return [
-          { 
-            id: 'rabbit_1', 
-            name: '래삐', 
-            image: images.allCharacters.rabbit.normal,
-            description: '작은 일에도 크게 웃고\n주변 모두를 가족처럼 챙기는 정 많은 래삐는 땀 흘리며 일하는 걸 즐기고\n친구에게 직접 수확한 당근을 건네는 걸 가장 좋아하죠.\n친구가 힘들 땐 말없이 옆에 앉아\n함께 흙을 파는 다정한 토끼예요.'
-          },
-          { 
-            id: 'rac_1', 
-            name: '구리삐', 
-            image: images.allCharacters.rac.normal,
-            description: '새로운 냄새, 새로운 길, 새로운 사과가 보이면\n누구보다 먼저 달려가는 구리삐는 밭을 벗어나 산까지 누비며\n다양한 사과 품종을 수집하는 너구리예요. 늘 가방엔 나침반과 돋보기를 들고 다니고\n길을 잃어도 절대 당황하지 않아요.\n친구들도 함께 모험에 이끄는 용감한 리더랍니다.'
-          },
-          { 
-            id: 'bear_1', 
-            name: '고미삐', 
-            image: images.allCharacters.bear.normal,
-            description: '곰두르지 않고 천천히\n누구보다 진심으로 다가가는 고미삐는 말없이 친구 곁에 앉아주는 것만으로도\n큰 위로가 되는 곰이에요. 밭에서 자란 호박을 정성껏 손질하며\n그 사이사이 친구들의 이야기를 묵묵히 들어줘요.'
-          },
-        ];
-      default:
-        return [];
-    }
-  };
+        case 'school':
+          return [
+            { 
+              id: 'chick_1', 
+              name: '아리삐', 
+              image: images.allCharacters.chick.normal,
+              description: '"왜?"라는 질문을 끊임없이 던지는 아리삐는\n낙천적인 태도와 호기심으로\n친구들에게 용기를 북돋아줘요'
+            },
+            { 
+              id: 'dog_1', 
+              name: '멍삐', 
+              image: images.allCharacters.dog.normal,
+              description: '늘 주변을 편안하게 만드는 멍삐는\n감정에 공감하는 능력이 뛰어나\n힘들 떄면 함께 울어주기도 해요'
+            },
+            { 
+              id: 'cat_1', 
+              name: '냥삐', 
+              image: images.allCharacters.cat.normal,
+              description: '활달하고 외향적인 냥삐는\n 음악이 흐르는 곳이면 어디든 달려가\n춤추고 노래하는 고양이에요'
+            },
+          ];
+        case 'farm':
+          return [
+            { 
+              id: 'rabbit_1', 
+              name: '래삐', 
+              image: images.allCharacters.rabbit.normal,
+              description: '작은 일에도 크게 웃고 정 많은 래삐는\n땀 흘리며 일하는 걸 즐기고\n친구에게 수확한 당근을 건네요.'
+            },
+            { 
+              id: 'rac_1', 
+              name: '구리삐', 
+              image: images.allCharacters.rac.normal,
+              description: '모든 일에 누구보다 먼저 달려가는 구리삐는\n 밭을 벗어나 산까지 누비며\n친구들을 이끄는 용감한 리더랍니다.'
+            },
+            { 
+              id: 'bear_1', 
+              name: '고미삐', 
+              image: images.allCharacters.bear.normal,
+              description: '천천히 진심으로 다가가는 고미삐는\n말없이 곁에 있는 것만으로도\n큰 위로가 되는 곰이에요\n모든 친구들의 이야기를 묵묵히 들어줘요.'
+            },
+          ];
+        default:
+          return [];
+      }
+    };
 
   const getBackground = () => {
     switch (selectedConcept) {
@@ -271,11 +271,36 @@ const CharacterScreen = () => {
     const index = Math.round(contentOffset / (CARD_WIDTH + CARD_SPACING));
     const actualIndex = index % getCharacters().length;
     setCurrentIndex(actualIndex);
+    
+    // 무한 스크롤을 위한 위치 조정
+    if (scrollViewRef.current) {
+      const totalWidth = (CARD_WIDTH + CARD_SPACING) * getCharacters().length;
+      const currentPosition = contentOffset;
+      
+      // 왼쪽 끝에 가까우면 오른쪽으로 이동
+      if (currentPosition < totalWidth) {
+        scrollViewRef.current.scrollTo({ 
+          x: currentPosition + totalWidth, 
+          animated: false 
+        });
+      }
+      // 오른쪽 끝에 가까우면 왼쪽으로 이동
+      else if (currentPosition > totalWidth * 2) {
+        scrollViewRef.current.scrollTo({ 
+          x: currentPosition - totalWidth, 
+          animated: false 
+        });
+      }
+    }
   };
 
   const characters = getCharacters();
   const background = getBackground();
-  const infiniteCharacters = [...characters, ...characters, ...characters];
+  // 충분한 수의 캐릭터를 생성하여 무한 스크롤 효과 구현
+  const infiniteCharacters = Array.from({ length: 15 }, (_, i) => {
+    const characterIndex = i % characters.length;
+    return { ...characters[characterIndex], uniqueId: i };
+  });
 
   useEffect(() => {
     if (scrollViewRef.current) {
@@ -298,7 +323,13 @@ const CharacterScreen = () => {
 
         {/* 상단 제목 */}
         <View style={styles.headerContainer}>
-          <Text style={styles.headerTitle}>캐릭터 선택</Text>
+          <ImageBackground 
+            source={require('../assets/images/icons/cloud1.png')}
+            style={styles.titleBackground}
+            resizeMode="contain"
+          >
+            <Text style={styles.headerTitle}>캐릭터 선택</Text>
+          </ImageBackground>
         </View>
 
         {/* 캐릭터 슬라이더 */}
@@ -320,7 +351,7 @@ const CharacterScreen = () => {
               const isSelected = actualIndex === currentIndex;
               
               return (
-                <View key={`${character.id}-${index}`} style={[
+                <View key={`${character.uniqueId}-${index}`} style={[
                   styles.cardWrapper,
                   isSelected && styles.selectedCardWrapper
                 ]}>
@@ -470,7 +501,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: SIZES.xl,
+    top: SIZES.xl * 1.5,
     left: SIZES.lg,
     zIndex: 1,
     width: 40,
@@ -487,22 +518,38 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     alignItems: 'center',
-    paddingTop: SIZES.xl * 2,
+    paddingTop: SIZES.xl * 4,
     paddingHorizontal: SIZES.lg,
+    height: 200,
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#333333',
-    textShadowColor: 'rgba(255, 255, 255, 0.8)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    color: '#654321',
+    fontFamily: 'Epilogue',
+    textAlign: 'center',
+    paddingHorizontal: SIZES.xl,
+    paddingVertical: SIZES.lg,
+    zIndex: 1,
+    marginTop: SIZES.md,
+  },
+  titleBackground: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 800,
+    height: 200,
+    position: 'absolute',
+    top: 0,
+    left: '50%',
+    transform: [{ translateX: -370 }],
+    bottom: 0,
   },
   cardsContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: -SIZES.xl * 6,
+    marginTop: -SIZES.xl * 7,
   },
   scrollContent: {
     alignItems: 'center',
@@ -572,11 +619,12 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(255, 182, 193, 0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+    fontFamily: 'Epilogue',
   },
   descriptionBox: {
     position: 'absolute',
     top: CARD_HEIGHT * 2.5 - SIZES.xl * 1.5,
-    left: -(screenWidth * 0.95 - (CARD_WIDTH + CARD_SPACING)) / 2,
+    left: -(screenWidth * 0.85 - (CARD_WIDTH + CARD_SPACING)) / 2,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 20,
     padding: SIZES.lg,
@@ -590,7 +638,7 @@ const styles = StyleSheet.create({
     elevation: 5,
     borderWidth: 2,
     borderColor: 'rgba(255, 182, 193, 0.3)',
-    width: screenWidth * 0.95,
+    width: screenWidth * 0.85,
     alignItems: 'center',
   },
   characterDescription: {
@@ -599,6 +647,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     width: '100%',
+    fontFamily: 'Epilogue',
   },
   modalOverlay: {
     flex: 1,
@@ -626,6 +675,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#333',
     marginBottom: SIZES.xl,
+    fontFamily: 'Epilogue',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -648,11 +698,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#666',
+    fontFamily: 'Epilogue',
   },
   confirmButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FFFFFF',
+    fontFamily: 'Epilogue',
   },
   emotionModalContainer: {
     backgroundColor: '#FFFFFF',
@@ -674,6 +726,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#333',
     marginBottom: SIZES.lg,
+    fontFamily: 'Epilogue',
   },
   emotionOptionsContainer: {
     flexDirection: 'row',
@@ -701,6 +754,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
+    fontFamily: 'Epilogue',
   },
   selectedEmotionText: {
     color: '#FFB6C1',

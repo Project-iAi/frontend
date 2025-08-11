@@ -361,8 +361,8 @@ const styles = StyleSheet.create({
     top: SIZES.xl * 2,
     right: SIZES.lg,
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: SIZES.md,
-    paddingVertical: SIZES.sm,
+    paddingHorizontal: SIZES.lg,
+    paddingVertical: SIZES.md,
     borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: {
@@ -377,12 +377,12 @@ const styles = StyleSheet.create({
   },
   endButtonText: {
     color: '#333333',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
   },
   backButton: {
     position: 'absolute',
-    top: SIZES.lg,
+    top: SIZES.xl * 2,
     left: SIZES.lg,
     zIndex: 10,
     backgroundColor: '#FFFFFF',
