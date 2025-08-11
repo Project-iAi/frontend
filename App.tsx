@@ -15,6 +15,8 @@ import CharacterScreen from './src/components/CharacterScreen';
 import ConversationScreen from './src/components/ConversationScreen';
 import DiaryScreen from './src/components/DiaryScreen';
 import CollectionScreen from './src/components/CollectionScreen';
+import DiaryDetailScreen from './src/components/DiaryDetailScreen';
+import ChatHistoryScreen from './src/components/ChatHistoryScreen';
 
 // 경고 메시지 숨기기
 LogBox.ignoreLogs([
@@ -43,6 +45,10 @@ const App = () => {
         return <DiaryScreen />;
       case 'collection':
         return <CollectionScreen />;
+      case 'diaryDetail':
+        return <DiaryDetailScreen />;
+      case 'chatHistory':
+        return <ChatHistoryScreen />;
       default:
         return <OnboardingScreen />;
     }

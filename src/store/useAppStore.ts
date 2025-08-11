@@ -22,6 +22,7 @@ interface AppStore extends AppState {
   
   // 일기 관리
   addDiaryEntry: (entry: DiaryEntry) => void;
+  setCurrentDiary: (diary: DiaryEntry | null) => void;
   
   // 리셋
   resetApp: () => void;
@@ -36,6 +37,7 @@ const initialState: AppState = {
   currentConversation: null,
   conversations: [],
   diaryEntries: [],
+  currentDiary: null,
 };
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -95,6 +97,10 @@ export const useAppStore = create<AppStore>((set) => ({
     set((state) => ({
       diaryEntries: [...state.diaryEntries, entry],
     }));
+  },
+
+  setCurrentDiary: (diary) => {
+    set({ currentDiary: diary });
   },
 
   resetApp: () => {

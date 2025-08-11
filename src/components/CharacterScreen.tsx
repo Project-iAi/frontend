@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import * as React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,6 +19,7 @@ import { Character } from '../types';
 import { EmotionType } from '../types';
 import { Conversation } from '../types';
 import { characterGreetings } from '../utils/data';
+import { apiService } from '../services/api';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = screenWidth * 0.4;
@@ -198,7 +200,7 @@ const CharacterScreen = () => {
     setSelectedEmotion(emotion as EmotionType);
   };
 
-  const handleConfirmEmotion = () => {
+  const handleConfirmEmotion = async () => {
     console.log('=== CharacterScreen Debug ===');
     console.log('selectedCharacterState:', selectedCharacterState);
     console.log('selectedEmotion (local):', globalSelectedEmotion);
@@ -206,50 +208,64 @@ const CharacterScreen = () => {
     console.log('=============================');
     
     if (selectedCharacterState) {
-      // Character 타입에 맞는 객체 생성
-      const character: Character = {
-        id: selectedCharacterState.id,
-        name: selectedCharacterState.name,
-        concept: selectedConcept!,
-        description: selectedCharacterState.description,
-      };
-      console.log('Created character:', character);
-      
-      // 상태 설정
-      setSelectedCharacter(character);
-      
-      // 로컬 상태의 selectedEmotion을 사용
-      const emotionToSet = globalSelectedEmotion || 'happy';
-      console.log('Setting emotion to:', emotionToSet);
-      
-      // 전역 상태에 감정 설정
-      setSelectedEmotion(emotionToSet as EmotionType);
-      
-      // 새로운 대화 생성
-      const newConversation: Conversation = {
-        id: Date.now().toString(),
-        characterId: character.id,
-        emotion: emotionToSet as EmotionType,
-        messages: [
-          {
-            id: '1',
-            sender: 'character' as const,
-            content: (characterGreetings as any)[character.id] || '안녕하세요! 오늘은 어떤 이야기를 나눠볼까요?',
-            timestamp: new Date(),
-          },
-        ],
-        createdAt: new Date(),
-      };
-      
-      // 현재 대화 설정
-      setCurrentConversation(newConversation);
-      
-      // 모달 닫기
-      setShowEmotionModal(false);
-      setSelectedCharacterState(null);
-      
-      // 다음 단계로 이동
-      setCurrentStep('conversation');
+      try {
+        // 1. 채팅방 생성 API 호출
+        console.log('채팅방 생성 중...');
+        const chatRoom = await apiService.createChatRoom();
+        console.log('채팅방 생성 완료:', chatRoom);
+
+        // 2. Character 타입에 맞는 객체 생성
+        const character: Character = {
+          id: selectedCharacterState.id,
+          name: selectedCharacterState.name,
+          concept: selectedConcept!,
+          description: selectedCharacterState.description,
+        };
+        console.log('Created character:', character);
+        
+        // 3. 상태 설정
+        setSelectedCharacter(character);
+        
+        // 4. 로컬 상태의 selectedEmotion을 사용
+        const emotionToSet = globalSelectedEmotion || 'happy';
+        console.log('Setting emotion to:', emotionToSet);
+        
+        // 5. 전역 상태에 감정 설정
+        setSelectedEmotion(emotionToSet as EmotionType);
+        
+        // 6. 새로운 대화 생성 (roomId 포함)
+        const newConversation: Conversation = {
+          id: chatRoom.id.toString(), // 채팅방 ID 사용
+          characterId: character.id,
+          emotion: emotionToSet as EmotionType,
+          messages: [
+            {
+              id: '1',
+              sender: 'character' as const,
+              content: (characterGreetings as any)[character.id] || '안녕하세요! 오늘은 어떤 이야기를 나눠볼까요?',
+              timestamp: new Date(),
+            },
+          ],
+          createdAt: new Date(),
+          roomId: chatRoom.id, // 채팅방 ID 추가
+        };
+        
+        // 7. 현재 대화 설정
+        setCurrentConversation(newConversation);
+        
+        // 8. 모달 닫기
+        setShowEmotionModal(false);
+        setSelectedCharacterState(null);
+
+        // 9. ConversationScreen으로 이동
+        setCurrentStep('conversation');
+        
+      } catch (error) {
+        console.error('채팅방 생성 실패:', error);
+        // 사용자에게 에러 알림
+        const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+        alert(`채팅방 생성 실패: ${errorMessage}`);
+      }
     } else {
       console.log('Missing selectedCharacterState');
     }
@@ -478,7 +494,13 @@ const CharacterScreen = () => {
                     styles.confirmButton,
                     !globalSelectedEmotion && styles.disabledButton
                   ]} 
-                  onPress={handleConfirmEmotion}
+                  onPress={() => {
+                    console.log('🔘 확인 버튼 클릭됨');
+                    console.log('🎭 현재 globalSelectedEmotion:', globalSelectedEmotion);
+                    console.log('❓ 버튼 disabled 상태:', !globalSelectedEmotion);
+                    console.log('==================');
+                    handleConfirmEmotion();
+                  }}
                   disabled={!globalSelectedEmotion}
                 >
                   <Text style={styles.confirmButtonText}>확인</Text>

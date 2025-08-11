@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,11 +13,11 @@ import {
 import { useAppStore } from '../store/useAppStore';
 import { SIZES } from '../utils/constants';
 import { images } from '../assets';
-import { Character, ConceptType, Conversation } from '../types';
+import { Character, ConceptType, Conversation, DiaryEntry } from '../types';
+import { apiService } from '../services/api';
 
 const CollectionScreen = () => {
   const {
-    diaryEntries,
     setCurrentStep,
     setCurrentConversation,
     setSelectedCharacter,
@@ -27,6 +27,8 @@ const CollectionScreen = () => {
   const [currentMonth, _setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [backendDiaries, setBackendDiaries] = useState<DiaryEntry[]>([]);
+  const [_isLoadingDiaries, setIsLoadingDiaries] = useState(false);
 
   const handleNewConversation = () => {
     setCurrentStep('concept');
@@ -35,6 +37,31 @@ const CollectionScreen = () => {
   const handleBack = () => {
     setCurrentStep('diary');
   };
+
+  // 백엔드에서 모든 일기 불러오기
+  useEffect(() => {
+    const loadAllDiaries = async () => {
+      setIsLoadingDiaries(true);
+      try {
+        console.log('📚 모든 일기 불러오기 시작...');
+        const diaries = await apiService.getAllDiaries();
+        console.log('✅ 모든 일기 불러오기 완료:', diaries);
+        console.log('📊 일기 개수:', diaries.length);
+        setBackendDiaries(diaries);
+        
+        // 각 일기의 날짜 로그
+        diaries.forEach((diary, index) => {
+          console.log(`📅 일기 ${index + 1}: ${diary.createdAt} (roomId: ${diary.roomId})`);
+        });
+      } catch (error) {
+        console.error('❌ 일기 목록 불러오기 실패:', error);
+      } finally {
+        setIsLoadingDiaries(false);
+      }
+    };
+
+    loadAllDiaries();
+  }, []);
 
   // 현재 월의 달력 데이터 생성
   const calendarData = useMemo(() => {
@@ -262,14 +289,31 @@ const CollectionScreen = () => {
     },
   };
 
-  // 실제 데이터와 임시 데이터 합치기
-  const allEntries = [...diaryEntries, ...Object.values(tempDiaryEntries)];
+  // 백엔드 데이터만 사용 (실제 데이터)
+  // const allEntries = backendDiaries; // 현재 사용하지 않음
 
   // 아이콘 가져오기
   const getIconForEntry = (entry: any) => {
+    // 백엔드 데이터인 경우 - 3개 컨셉 아이콘 중 하나를 선택
+    if ('roomId' in entry) {
+      const conceptIcons = [
+        images.icons.space,    // 우주 (roomId % 3 === 0)
+        images.icons.school,   // 학교 (roomId % 3 === 1)
+        images.icons.farm      // 농장 (roomId % 3 === 2)
+      ];
+      
+      // roomId 기반으로 일관된 아이콘 선택 (같은 roomId는 항상 같은 아이콘)
+      const iconIndex = entry.roomId % 3;
+      const iconTypes = ['우주', '학교', '농장'];
+      
+      console.log(`🗓️ 달력 아이콘: roomId ${entry.roomId} → ${iconTypes[iconIndex]} 아이콘 (${iconIndex})`);
+      
+      return conceptIcons[iconIndex];
+    }
+    
+    // 기존 mock 데이터인 경우
     const concept = entry.concept || 'school';
     
-    // 기본 아이콘 반환
     switch (concept) {
       case 'space':
         return images.icons.space;
@@ -311,17 +355,27 @@ const CollectionScreen = () => {
     return images.characters['space-1'];
   };
 
-  // 해당 날짜의 일기 항목들 가져오기
+  // 해당 날짜의 일기 항목들 가져오기 (백엔드 데이터만 사용)
   const getEntriesForDate = (date: Date) => {
-    return allEntries.filter(entry => {
+    const backendEntries = backendDiaries.filter(entry => {
       const entryDate = new Date(entry.createdAt);
-      return entryDate.getDate() === date.getDate() &&
-             entryDate.getMonth() === date.getMonth() &&
-             entryDate.getFullYear() === date.getFullYear();
+      const dateMatch = entryDate.getDate() === date.getDate() &&
+                       entryDate.getMonth() === date.getMonth() &&
+                       entryDate.getFullYear() === date.getFullYear();
+      
+      // 날짜별 로그 (디버깅용)
+      if (dateMatch) {
+        console.log(`📅 일치하는 일기 발견: ${date.toDateString()} - roomId: ${entry.roomId}`);
+      }
+      
+      return dateMatch;
     });
+    
+    console.log(`🗓️ ${date.getDate()}일 일기 개수:`, backendEntries.length);
+    return backendEntries;
   };
 
-  // 날짜 클릭 핸들러
+  // 날짜 클릭 핸들러 (기존 모달 방식 복원)
   const handleDatePress = (date: Date) => {
     const entries = getEntriesForDate(date);
     if (entries.length > 0) {
@@ -343,57 +397,119 @@ const CollectionScreen = () => {
     'bear': { name: '고미삐', concept: 'farm' as ConceptType },
   };
 
-  // 대화 보기 핸들러
-  const handleViewConversation = (entry: any) => {
-    const conversationId = entry.conversationId;
-    const conversation = tempConversations[conversationId];
-    
-    if (conversation) {
-      const charInfo = characterInfo[conversation.characterId as keyof typeof characterInfo];
-      
-      if (charInfo) {
-        // 캐릭터 정보 설정
-        const character: Character = {
-          id: conversation.characterId,
-          name: charInfo.name,
-          concept: charInfo.concept,
-          description: `${charInfo.name}와의 대화`,
+  // 대화 보기 핸들러 (백엔드 데이터 지원)
+  const handleViewConversation = async (entry: any) => {
+    if ('roomId' in entry) {
+      // 백엔드 데이터인 경우 - 실제 채팅 메시지를 불러와서 바로 채팅 UI로 이동
+      try {
+        console.log('💬 채팅 내역 불러오기 시작, roomId:', entry.roomId);
+        
+        // 캐릭터 정보 설정 (ChatHistoryScreen용)
+        const mockCharacter = {
+          id: 'ham_1',
+          name: '햄삐',
+          concept: 'space' as ConceptType,
+          description: '햄삐와의 추억',
         };
         
-        setSelectedCharacter(character);
-        setSelectedConcept(charInfo.concept);
-        setSelectedEmotion(conversation.emotion);
-        setCurrentConversation(conversation);
+        setSelectedCharacter(mockCharacter);
+        setSelectedConcept(mockCharacter.concept);
+        setSelectedEmotion('happy');
+        
+        // 채팅 기록 화면용 대화 정보 설정 (메시지는 ChatHistoryScreen에서 직접 로드)
+        setCurrentConversation({
+          id: entry.id.toString(),
+          characterId: mockCharacter.id,
+          emotion: 'happy',
+          messages: [], // ChatHistoryScreen에서 직접 로드
+          createdAt: new Date(entry.createdAt),
+          roomId: entry.roomId,
+        });
+        
         setShowModal(false);
-        setCurrentStep('conversation');
+        setCurrentStep('chatHistory'); // 채팅 기록 전용 UI로 이동
+        
+      } catch (error) {
+        console.error('❌ 채팅 내역 불러오기 실패:', error);
+        alert('채팅 내역을 불러오는데 실패했습니다.');
+      }
+    } else {
+      // 기존 mock 데이터인 경우
+      const conversationId = entry.conversationId;
+      const conversation = tempConversations[conversationId];
+      
+      if (conversation) {
+        const charInfo = characterInfo[conversation.characterId as keyof typeof characterInfo];
+        
+        if (charInfo) {
+          const character: Character = {
+            id: conversation.characterId,
+            name: charInfo.name,
+            concept: charInfo.concept,
+            description: `${charInfo.name}와의 대화`,
+          };
+          
+          setSelectedCharacter(character);
+          setSelectedConcept(charInfo.concept);
+          setSelectedEmotion(conversation.emotion);
+          setCurrentConversation(conversation);
+          setShowModal(false);
+          setCurrentStep('conversation');
+        }
       }
     }
   };
 
-  // 일기 보기 핸들러
+  // 일기 보기 핸들러 (백엔드 데이터 지원)
   const handleViewDiary = (entry: any) => {
-    const conversationId = entry.conversationId;
-    const conversation = tempConversations[conversationId];
-    const diaryEntry = tempDiaryEntries[conversationId as keyof typeof tempDiaryEntries];
-    
-    if (conversation && diaryEntry) {
-      const charInfo = characterInfo[conversation.characterId as keyof typeof characterInfo];
+    if ('roomId' in entry) {
+      // 백엔드 데이터인 경우
+      const mockCharacter = {
+        id: 'ham', // 임시
+        name: '햄삐', // 임시
+        concept: 'space' as ConceptType, // 임시
+        description: '햄삐와의 추억',
+      };
       
-      if (charInfo) {
-        // 캐릭터 정보 설정
-        const character: Character = {
-          id: conversation.characterId,
-          name: charInfo.name,
-          concept: charInfo.concept,
-          description: `${charInfo.name}와의 대화`,
-        };
+      setSelectedCharacter(mockCharacter);
+      setSelectedConcept(mockCharacter.concept);
+      
+      // 대화 정보 설정
+      setCurrentConversation({
+        id: entry.id.toString(),
+        characterId: mockCharacter.id,
+        emotion: 'happy',
+        messages: [], // 백엔드에서 불러옴
+        createdAt: new Date(entry.createdAt),
+        roomId: entry.roomId,
+      });
+      
+      setShowModal(false);
+      setCurrentStep('diary'); // DiaryScreen으로 직접 이동
+    } else {
+      // 기존 mock 데이터인 경우
+      const conversationId = entry.conversationId;
+      const conversation = tempConversations[conversationId];
+      const diaryEntry = tempDiaryEntries[conversationId as keyof typeof tempDiaryEntries];
+      
+      if (conversation && diaryEntry) {
+        const charInfo = characterInfo[conversation.characterId as keyof typeof characterInfo];
         
-        setSelectedCharacter(character);
-        setSelectedConcept(charInfo.concept);
-        setSelectedEmotion(conversation.emotion);
-        setCurrentConversation(conversation);
-        setShowModal(false);
-        setCurrentStep('diary');
+        if (charInfo) {
+          const character: Character = {
+            id: conversation.characterId,
+            name: charInfo.name,
+            concept: charInfo.concept,
+            description: `${charInfo.name}와의 대화`,
+          };
+          
+          setSelectedCharacter(character);
+          setSelectedConcept(charInfo.concept);
+          setSelectedEmotion(conversation.emotion);
+          setCurrentConversation(conversation);
+          setShowModal(false);
+          setCurrentStep('diary');
+        }
       }
     }
   };
@@ -514,34 +630,87 @@ const CollectionScreen = () => {
               </Text>
               
               <ScrollView style={styles.entriesList}>
-                {selectedDate && getEntriesForDate(selectedDate).map((entry) => (
-                  <View key={entry.id} style={styles.entryItem}>
-                    <View style={styles.entryHeader}>
-                      <View style={styles.entryContent}>
-                        <Image 
-                          source={getCharacterImage(entry.title)} 
-                          style={styles.characterImage}
-                        />
-                        <Text style={styles.entryTitle}>{entry.title}</Text>
+                {selectedDate && getEntriesForDate(selectedDate).map((entry, index) => {
+                  const isBackendEntry = 'roomId' in entry;
+                  
+                  // 백엔드 데이터인 경우
+                  if (isBackendEntry) {
+                    const time = new Date(entry.createdAt).toLocaleTimeString('ko-KR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    });
+                    const title = entry.summary && entry.summary.length > 0 
+                      ? entry.summary.slice(0, 30) + (entry.summary.length > 30 ? '...' : '')
+                      : `${index + 1}번째 대화`;
+                    
+                    return (
+                      <View key={entry.id} style={styles.entryItem}>
+                        <View style={styles.entryHeader}>
+                          <View style={styles.entryContent}>
+                            <Image 
+                              source={getIconForEntry(entry)} 
+                              style={styles.characterImage}
+                            />
+                            <View style={styles.entryTextContent}>
+                              <Text style={styles.entryTitle}>{title}</Text>
+                              <Text style={styles.entrySubtitle}>roomId: {entry.roomId}</Text>
+                            </View>
+                          </View>
+                          <Text style={styles.entryTime}>{time}</Text>
+                        </View>
+                        <View style={styles.entryButtons}>
+                          <TouchableOpacity 
+                            style={styles.conversationButton}
+                            onPress={() => handleViewConversation(entry)}
+                          >
+                            <Text style={styles.buttonText}>대화</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={styles.diaryButton}
+                            onPress={() => handleViewDiary(entry)}
+                          >
+                            <Text style={styles.buttonText}>일기</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                      <Text style={styles.entryTime}>{entry.time}</Text>
+                    );
+                  }
+                  
+                  // Mock 데이터인 경우 (기존 로직)
+                  const title = entry.title;
+                  const time = entry.time;
+                  const characterImage = getCharacterImage(entry.title);
+                  
+                  return (
+                    <View key={entry.id} style={styles.entryItem}>
+                      <View style={styles.entryHeader}>
+                        <View style={styles.entryContent}>
+                          <Image 
+                            source={characterImage} 
+                            style={styles.characterImage}
+                          />
+                          <Text style={styles.entryTitle}>{title}</Text>
+                        </View>
+                        <Text style={styles.entryTime}>{time}</Text>
+                      </View>
+                      <View style={styles.entryButtons}>
+                        <TouchableOpacity 
+                          style={styles.conversationButton}
+                          onPress={() => handleViewConversation(entry)}
+                        >
+                          <Text style={styles.buttonText}>대화</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={styles.diaryButton}
+                          onPress={() => handleViewDiary(entry)}
+                        >
+                          <Text style={styles.buttonText}>일기</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                    <View style={styles.entryButtons}>
-                      <TouchableOpacity 
-                        style={styles.conversationButton}
-                        onPress={() => handleViewConversation(entry)}
-                      >
-                        <Text style={styles.buttonText}>대화</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={styles.diaryButton}
-                        onPress={() => handleViewDiary(entry)}
-                      >
-                        <Text style={styles.buttonText}>일기</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
+                  );
+                })}
               </ScrollView>
               
               <TouchableOpacity 
@@ -775,11 +944,20 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'transparent',
   },
+  entryTextContent: {
+    flex: 1,
+    marginLeft: SIZES.sm,
+  },
   entryTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333333',
     flex: 1,
+  },
+  entrySubtitle: {
+    fontSize: 14,
+    color: '#666666',
+    marginTop: 2,
   },
   entryTime: {
     fontSize: 14,

@@ -8,10 +8,12 @@ import {
   ScrollView,
   ImageBackground,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { SIZES } from '../utils/constants';
 import { images } from '../assets';
+import { apiService } from '../services/api';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -19,15 +21,16 @@ const DiaryScreen = () => {
   const {
     currentConversation,
     selectedCharacter,
-    selectedEmotion,
-    selectedConcept,
     user,
     setCurrentStep,
-    addDiaryEntry,
+    currentDiary,
+    setCurrentDiary,
   } = useAppStore();
 
   const [isGenerating, setIsGenerating] = useState(true);
   const [diaryContent, setDiaryContent] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleBack = () => {
     setCurrentStep('collection');
@@ -62,38 +65,43 @@ const DiaryScreen = () => {
   };
 
   useEffect(() => {
-    // 일기 생성 시뮬레이션
-    if (isGenerating && currentConversation && selectedCharacter && user) {
-      setTimeout(() => {
-        const emotionText = {
-          happy: '기쁜',
-          sad: '슬픈',
-          angry: '화난',
-        }[selectedEmotion || 'happy'];
-
-        const generatedContent = `${user.child.name}는 오늘 ${emotionText} 마음으로 ${selectedCharacter.name}와 함께 이야기를 나누었어요. ${currentConversation.messages
-          .filter(msg => msg.sender === 'user')
-          .map(msg => msg.content)
-          .join(' ')}라는 이야기를 나누며 서로의 마음을 이해했답니다. 이런 소중한 대화를 통해 ${user.child.name}는 더욱 성장할 수 있었어요.`;
-
-        setDiaryContent(generatedContent);
+    const fetchDiary = async () => {
+      // currentDiary가 있으면 그것을 사용 (일기 생성 직후)
+      if (currentDiary) {
+        setDiaryContent(currentDiary.content);
         setIsGenerating(false);
+        return;
+      }
 
-        // 일기 항목 추가
-        const diaryEntry = {
-          id: Date.now().toString(),
-          conversationId: currentConversation.id,
-          title: `${selectedCharacter.name}와의 대화`,
-          content: generatedContent,
-          createdAt: new Date(),
-          concept: selectedConcept!,
-        };
-        addDiaryEntry(diaryEntry);
-      }, 3000);
-    }
-  }, [isGenerating, currentConversation, selectedCharacter, selectedEmotion, user, selectedConcept, addDiaryEntry]);
+      // currentDiary가 없고 roomId가 있으면 API에서 조회
+      if (currentConversation?.roomId) {
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+          console.log('일기 조회 중...', currentConversation.roomId);
+          const diary = await apiService.getDiary(currentConversation.roomId);
+          console.log('일기 조회 완료:', diary);
+          
+          setDiaryContent(diary.content);
+          setCurrentDiary(diary);
+          setIsGenerating(false);
+          
+        } catch (diaryError) {
+          console.error('일기 조회 실패:', diaryError);
+          setError('일기를 불러올 수 없습니다.');
+          setIsGenerating(false);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
 
-  if (!currentConversation || !selectedCharacter || !user) {
+    fetchDiary();
+  }, [currentDiary, currentConversation?.roomId, setCurrentDiary]);
+
+  // 기본 필수 정보 체크
+  if (!selectedCharacter || !user) {
     return (
       <ImageBackground 
         source={images.backgrounds.main} 
@@ -102,7 +110,7 @@ const DiaryScreen = () => {
       >
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>일기 정보가 없습니다</Text>
+            <Text style={styles.errorText}>정보가 없습니다</Text>
             <TouchableOpacity style={styles.errorBackButton} onPress={handleBack}>
               <Text style={styles.errorBackButtonText}>뒤로가기</Text>
             </TouchableOpacity>
@@ -112,7 +120,33 @@ const DiaryScreen = () => {
     );
   }
 
-  if (isGenerating) {
+  // 오류 상태
+  if (error) {
+    return (
+      <ImageBackground 
+        source={images.backgrounds.main} 
+        style={styles.container}
+        resizeMode="cover"
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity 
+              style={styles.errorBackButton} 
+              onPress={() => {
+                setError(null);
+                setIsLoading(true);
+              }}
+            >
+              <Text style={styles.errorBackButtonText}>다시 시도</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </ImageBackground>
+    );
+  }
+
+  if (isGenerating || isLoading) {
     return (
       <ImageBackground 
         source={images.backgrounds.main} 
@@ -122,8 +156,30 @@ const DiaryScreen = () => {
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.generatingContainer}>
             <View style={styles.loadingCard}>
-              <Text style={styles.loadingText}>일기를 생성하고 있어요...</Text>
+              <Text style={styles.generatingText}>
+                {isLoading ? '일기를 불러오고 있어요...' : '일기를 생성하고 있어요...'}
+              </Text>
             </View>
+          </View>
+        </SafeAreaView>
+      </ImageBackground>
+    );
+  }
+
+  // 일기 데이터가 없는 경우
+  if (!currentDiary) {
+    return (
+      <ImageBackground 
+        source={images.backgrounds.main} 
+        style={styles.container}
+        resizeMode="cover"
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>아직 일기가 생성되지 않았습니다</Text>
+            <TouchableOpacity style={styles.errorBackButton} onPress={handleBack}>
+              <Text style={styles.errorBackButtonText}>뒤로가기</Text>
+            </TouchableOpacity>
           </View>
         </SafeAreaView>
       </ImageBackground>
@@ -147,12 +203,17 @@ const DiaryScreen = () => {
             {/* 그림 영역 */}
             <View style={styles.illustrationContainer}>
               <View style={styles.illustrationBox}>
-                <View style={styles.cloudContainer}>
-                  <Text style={styles.cloudEmoji}>☁️</Text>
-                </View>
-                <View style={styles.characterContainer}>
-                  <Text style={styles.characterEmoji}>🐻</Text>
-                </View>
+                {currentDiary?.imageUrl ? (
+                  <Image 
+                    source={{ uri: currentDiary.imageUrl }}
+                    style={styles.generatedImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.loadingImageContainer}>
+                    <Text style={styles.loadingText}>그림을 그리는 중...</Text>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -267,6 +328,23 @@ const styles = StyleSheet.create({
   characterEmoji: {
     fontSize: 50,
   },
+  generatedImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+  },
+  loadingImageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F0F0F0',
+    borderRadius: 10,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
   contentContainer: {
     flex: 1,
     backgroundColor: '#FFF5F5',
@@ -365,7 +443,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
+  generatingText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333333',
