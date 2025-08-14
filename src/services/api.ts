@@ -1,19 +1,38 @@
 // API 서비스 및 타입 정의
 import io, { Socket } from 'socket.io-client';
 
-import { Platform } from 'react-native';
+import { Platform, NativeModules } from 'react-native';
 
 // 백엔드 URL 설정
-// 안드로이드 에뮬레이터: 10.0.2.2 (호스트 컴퓨터의 localhost)
-// iOS 시뮬레이터: localhost
-// 실제 디바이스: 컴퓨터의 실제 IP 주소 (예: 192.168.1.100)
+// - 안드로이드 에뮬레이터: 10.0.2.2 (호스트 컴퓨터의 localhost)
+// - iOS 시뮬레이터: localhost
+// - 실제 디바이스(안드/IOS): Metro 번들러의 호스트 IP를 추출하여 사용
+
+const resolveDevHost = (): string => {
+  try {
+    // e.g. "http://192.168.0.5:8081/index.bundle?platform=android&dev=true&minify=false"
+    const scriptURL: string | undefined = (NativeModules as any)?.SourceCode?.scriptURL;
+    if (scriptURL) {
+      const match = scriptURL.match(/^[a-zA-Z]+:\/\/([^/:]+):\d+/);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+  } catch (_) {}
+  return 'localhost';
+};
 
 const getBaseURL = () => {
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:3000'; // 안드로이드 에뮬레이터용
-  } else {
-    return 'http://localhost:3000'; // iOS 시뮬레이터용
+  // 개발 모드에서는 adb reverse(또는 네트워크 프록시)를 통해 localhost로 고정
+  // - Android 실기기/에뮬레이터 모두 adb reverse 설정 시 localhost 사용 가능
+  // - iOS 시뮬레이터는 localhost 기본 사용
+  if (__DEV__) {
+    return 'http://localhost:3000';
   }
+
+  // 프로덕션(또는 dev 서버 호스트를 강제로 사용해야 하는 경우)만 Metro 호스트 IP 추정
+  const host = resolveDevHost();
+  return `http://${host}:3000`;
 };
 
 const API_BASE_URL = getBaseURL();
