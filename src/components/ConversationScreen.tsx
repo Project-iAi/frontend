@@ -13,6 +13,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { characterGreetings } from '../utils/data';
@@ -21,6 +22,9 @@ import { images } from '../assets';
 import { apiService, socketService, SocketMessage, ProcessingStatus } from '../services/api';
 import Sound from 'react-native-sound';
 import RNFS from 'react-native-fs';
+// Android 전용 녹음 모듈은 런타임에 조건부 로드 (iOS 크래시 방지)
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+let AndroidAudioRecord: any = null;
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -45,6 +49,10 @@ const ConversationScreen = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [currentSound, setCurrentSound] = useState<Sound | null>(null);
+  // 녹음 상태
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingHint, setRecordingHint] = useState<string | null>(null);
+  const audioRecordRef = useRef<any>(null);
   
   const socketRef = useRef<any>(null);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -103,6 +111,102 @@ const ConversationScreen = () => {
       }
     };
   }, [currentSound]);
+
+  // 오디오 레코더 초기화 (Android만)
+  useEffect(() => {
+    const initRecorder = async () => {
+      try {
+        if (Platform.OS !== 'android') {
+          console.log('iOS: 현재 로컬 녹음 비활성화 (서버 TTS/TTS만)');
+          return;
+        }
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          console.warn('마이크 권한 거부됨');
+          return;
+        }
+        if (!AndroidAudioRecord) {
+          AndroidAudioRecord = require('react-native-audio-record').default || require('react-native-audio-record');
+        }
+        AndroidAudioRecord.init({
+          sampleRate: 16000,
+          channels: 1,
+          bitsPerSample: 16,
+          wavFile: `voice_${Date.now()}.wav`,
+        });
+        audioRecordRef.current = AndroidAudioRecord;
+        console.log('🎛️ AudioRecord(Android) 초기화 완료');
+      } catch (e) {
+        console.error('AudioRecord 초기화 실패:', e);
+      }
+    };
+    initRecorder();
+  }, []);
+
+  const requestMicPermissionAndroid = async () => {
+    if (Platform.OS !== 'android') return true;
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch (e) {
+      console.error('마이크 권한 요청 실패:', e);
+      return false;
+    }
+  };
+
+  const startRecording = async () => {
+    if (isRecording) return;
+    if (!roomId) {
+      Alert.alert('오류', '채팅방 정보가 없습니다.');
+      return;
+    }
+    try {
+      console.log('🎙️ 녹음 시작');
+      setIsRecording(true);
+      setRecordingHint('녹음 중...');
+      if (Platform.OS === 'android' && audioRecordRef.current) {
+        audioRecordRef.current.start();
+      } else {
+        Alert.alert('알림', 'iOS에서는 현재 녹음 기능이 비활성화되어 있습니다.');
+        setIsRecording(false);
+        setRecordingHint(null);
+      }
+    } catch (e) {
+      console.error('녹음 시작 실패:', e);
+      setIsRecording(false);
+      setRecordingHint(null);
+      Alert.alert('오류', '녹음을 시작할 수 없습니다.');
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!isRecording) return;
+    try {
+      console.log('🛑 녹음 중지');
+      let filePath: string | null = null;
+      if (Platform.OS === 'android' && audioRecordRef.current) {
+        filePath = await audioRecordRef.current.stop();
+      } else {
+        Alert.alert('알림', 'iOS에서는 현재 녹음 기능이 비활성화되어 있습니다.');
+        setIsRecording(false);
+        setRecordingHint(null);
+        return;
+      }
+      setIsRecording(false);
+      setRecordingHint(null);
+      console.log('📁 파일 경로:', filePath);
+      if (!filePath || !socketRef.current || !roomId) return;
+      const base64Audio = await RNFS.readFile(filePath, 'base64');
+      console.log('📦 전송 길이:', base64Audio.length);
+      socketService.sendVoiceMessage(socketRef.current, roomId, base64Audio);
+    } catch (e) {
+      console.error('녹음 중지 실패:', e);
+    }
+  };
 
   // 오디오 재생 함수
   const playAudioFromBase64 = useCallback(async (base64Data: string) => {
@@ -444,6 +548,13 @@ const ConversationScreen = () => {
 
           {/* 입력창 */}
           <View style={styles.inputContainer}>
+            {/* 마이크 버튼 */}
+            <TouchableOpacity
+              style={[styles.micButton, isRecording && styles.micButtonRecording]}
+              onPress={isRecording ? stopRecording : startRecording}
+            >
+              <Text style={styles.micButtonText}>{isRecording ? '⏹️' : '🎤'}</Text>
+            </TouchableOpacity>
             <TextInput
               style={styles.input}
               value={inputText}
@@ -466,6 +577,13 @@ const ConversationScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
+        {/* 녹음 상태 표시 */}
+        {recordingHint && (
+          <View style={styles.recordingContainer}>
+            <ActivityIndicator size="small" color="#FF3B30" />
+            <Text style={styles.recordingText}>{recordingHint}</Text>
+          </View>
+        )}
       </SafeAreaView>
     </ImageBackground>
   );
@@ -747,6 +865,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FFB6C1',
     fontWeight: '500',
+  },
+  // STT 마이크 버튼/상태
+  micButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFB6C1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SIZES.sm,
+  },
+  micButtonRecording: {
+    backgroundColor: '#FF3B30',
+  },
+  micButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  recordingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SIZES.sm,
+  },
+  recordingText: {
+    marginLeft: SIZES.sm,
+    color: '#FF3B30',
   },
 });
 

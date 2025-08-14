@@ -23,15 +23,27 @@ const resolveDevHost = (): string => {
 };
 
 const getBaseURL = () => {
-  // 개발 모드에서는 adb reverse(또는 네트워크 프록시)를 통해 localhost로 고정
-  // - Android 실기기/에뮬레이터 모두 adb reverse 설정 시 localhost 사용 가능
-  // - iOS 시뮬레이터는 localhost 기본 사용
-  if (__DEV__) {
-    return 'http://localhost:3000';
+  // Metro 번들러의 호스트를 최우선으로 사용하고,
+  // 'localhost'인 경우에는 각 플랫폼의 권장 루프백 대체를 사용
+  const host = resolveDevHost();
+
+  if (Platform.OS === 'android') {
+    // Android
+    // - 에뮬레이터: host가 localhost/127.0.0.1 → 10.0.2.2 사용
+    // - 실기기 + adb reverse: host가 localhost/127.0.0.1 → localhost 사용
+    // 구분이 어려우므로 우선 localhost로 시도하고, 필요 시 10.0.2.2 주석으로 안내
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return 'http://localhost:3000';
+      // 에뮬레이터 전용이 필요하면 아래로 변경
+      // return 'http://10.0.2.2:3000';
+    }
+    return `http://${host}:3000`;
   }
 
-  // 프로덕션(또는 dev 서버 호스트를 강제로 사용해야 하는 경우)만 Metro 호스트 IP 추정
-  const host = resolveDevHost();
+  // iOS: 시뮬레이터는 localhost, 실기기는 Metro 호스트 IP 사용
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return 'http://localhost:3000';
+  }
   return `http://${host}:3000`;
 };
 
