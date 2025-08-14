@@ -22,9 +22,8 @@ import { images } from '../assets';
 import { apiService, socketService, SocketMessage, ProcessingStatus } from '../services/api';
 import Sound from 'react-native-sound';
 import RNFS from 'react-native-fs';
-// Android 전용 녹음 모듈은 런타임에 조건부 로드 (iOS 크래시 방지)
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-let AndroidAudioRecord: any = null;
+import AudioRecord from 'react-native-audio-record';
+import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -112,32 +111,33 @@ const ConversationScreen = () => {
     };
   }, [currentSound]);
 
-  // 오디오 레코더 초기화 (Android만)
+  // 오디오 레코더 초기화 (iOS/Android)
   useEffect(() => {
     const initRecorder = async () => {
       try {
-        if (Platform.OS !== 'android') {
-          console.log('iOS: 현재 로컬 녹음 비활성화 (서버 TTS/TTS만)');
-          return;
+        if (Platform.OS === 'android') {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+          );
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            console.warn('마이크 권한 거부됨');
+            return;
+          }
+        } else {
+          const res = await request(PERMISSIONS.IOS.MICROPHONE);
+          if (res !== RESULTS.GRANTED) {
+            console.warn('iOS 마이크 권한 거부됨:', res);
+            return;
+          }
         }
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
-        );
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          console.warn('마이크 권한 거부됨');
-          return;
-        }
-        if (!AndroidAudioRecord) {
-          AndroidAudioRecord = require('react-native-audio-record').default || require('react-native-audio-record');
-        }
-        AndroidAudioRecord.init({
+        AudioRecord.init({
           sampleRate: 16000,
           channels: 1,
           bitsPerSample: 16,
           wavFile: `voice_${Date.now()}.wav`,
         });
-        audioRecordRef.current = AndroidAudioRecord;
-        console.log('🎛️ AudioRecord(Android) 초기화 완료');
+        audioRecordRef.current = AudioRecord;
+        console.log('🎛️ AudioRecord 초기화 완료');
       } catch (e) {
         console.error('AudioRecord 초기화 실패:', e);
       }
@@ -168,13 +168,7 @@ const ConversationScreen = () => {
       console.log('🎙️ 녹음 시작');
       setIsRecording(true);
       setRecordingHint('녹음 중...');
-      if (Platform.OS === 'android' && audioRecordRef.current) {
-        audioRecordRef.current.start();
-      } else {
-        Alert.alert('알림', 'iOS에서는 현재 녹음 기능이 비활성화되어 있습니다.');
-        setIsRecording(false);
-        setRecordingHint(null);
-      }
+      if (audioRecordRef.current) audioRecordRef.current.start();
     } catch (e) {
       console.error('녹음 시작 실패:', e);
       setIsRecording(false);
@@ -187,15 +181,7 @@ const ConversationScreen = () => {
     if (!isRecording) return;
     try {
       console.log('🛑 녹음 중지');
-      let filePath: string | null = null;
-      if (Platform.OS === 'android' && audioRecordRef.current) {
-        filePath = await audioRecordRef.current.stop();
-      } else {
-        Alert.alert('알림', 'iOS에서는 현재 녹음 기능이 비활성화되어 있습니다.');
-        setIsRecording(false);
-        setRecordingHint(null);
-        return;
-      }
+      const filePath: string | null = audioRecordRef.current ? await audioRecordRef.current.stop() : null;
       setIsRecording(false);
       setRecordingHint(null);
       console.log('📁 파일 경로:', filePath);

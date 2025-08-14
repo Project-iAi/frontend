@@ -22,6 +22,10 @@ const resolveDevHost = (): string => {
   return 'localhost';
 };
 
+// iOS 실기기에서 host가 localhost로 잡히는 경우를 대비한 핫픽스용 IP (맥의 로컬 IP)
+// 필요 시 변경하세요.
+const DEV_FALLBACK_HOST = '192.168.45.118';
+
 const getBaseURL = () => {
   // Metro 번들러의 호스트를 최우선으로 사용하고,
   // 'localhost'인 경우에는 각 플랫폼의 권장 루프백 대체를 사용
@@ -29,26 +33,25 @@ const getBaseURL = () => {
 
   if (Platform.OS === 'android') {
     // Android
-    // - 에뮬레이터: host가 localhost/127.0.0.1 → 10.0.2.2 사용
-    // - 실기기 + adb reverse: host가 localhost/127.0.0.1 → localhost 사용
-    // 구분이 어려우므로 우선 localhost로 시도하고, 필요 시 10.0.2.2 주석으로 안내
+    // host가 localhost로 나올 때: 실기기/에뮬레이터 구분 없이 우선 개발 PC IP를 사용하고,
+    // 마지막 수단으로 10.0.2.2(에뮬레이터 전용)를 사용
     if (host === 'localhost' || host === '127.0.0.1') {
-      return 'http://localhost:3000';
-      // 에뮬레이터 전용이 필요하면 아래로 변경
-      // return 'http://10.0.2.2:3000';
+      return `http://${DEV_FALLBACK_HOST}:3000`;
     }
+    // Dev Settings에 IP를 넣어둔 경우 그대로 사용
     return `http://${host}:3000`;
   }
 
   // iOS: 시뮬레이터는 localhost, 실기기는 Metro 호스트 IP 사용
   if (host === 'localhost' || host === '127.0.0.1') {
-    return 'http://localhost:3000';
+    // 실기기에서 localhost로 잡히면 맥 IP로 강제 교체
+    return `http://${DEV_FALLBACK_HOST}:3000`;
   }
   return `http://${host}:3000`;
 };
 
 const API_BASE_URL = getBaseURL();
-const SOCKET_URL = getBaseURL();
+const SOCKET_URL = API_BASE_URL;
 
 // 타입 정의
 export interface ChatRoom {
