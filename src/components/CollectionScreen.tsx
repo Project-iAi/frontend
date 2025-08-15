@@ -77,7 +77,7 @@ const CollectionScreen = () => {
         // 타입 변환: createdAt을 문자열(ISO)로 변환하여 스토어 타입과 일치
         const normalized = diaries.map((d: any) => ({
           ...d,
-          createdAt: new Date(d.createdAt).toISOString(),
+          createdAt: new Date(d.createdAt),
         }));
         setBackendDiaries(normalized as any);
         

@@ -140,18 +140,30 @@ export const apiService = {
 
   // 일기 생성
   createDiary: async (roomId: number): Promise<DiaryResponse> => {
-    const response = await fetch(`${API_BASE_URL}/diary/room/${roomId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error('일기 생성 실패');
+    console.log('🚀 일기 생성 시작:', `${API_BASE_URL}/diary/room/${roomId}`);
+    try {
+      const response = await fetch(`${API_BASE_URL}/diary/room/${roomId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      console.log('📡 응답 상태:', response.status, response.statusText);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API 오류 응답:', errorText);
+        throw new Error(`일기 생성 실패: ${response.status} ${response.statusText}`);
+      }
+      const result = await response.json();
+      console.log('✅ 일기 생성 성공:', result);
+      return result;
+    } catch (error) {
+      console.error('💥 일기 생성 API 오류:', error);
+      if (error instanceof Error && error.message.includes('Network request failed')) {
+        throw new Error('서버에 연결할 수 없습니다.');
+      }
+      throw error;
     }
-    
-    return response.json();
   },
 
   // 특정 방 일기 조회
@@ -188,7 +200,12 @@ export const socketService = {
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
     });
-    
+    socket.on('connect_error', (error) => {
+      console.error('🔌 소켓 연결 실패:', (error as any)?.message || String(error));
+    });
+    socket.on('connect', () => {
+      console.log('✅ 소켓 연결 성공');
+    });
     return socket;
   },
 

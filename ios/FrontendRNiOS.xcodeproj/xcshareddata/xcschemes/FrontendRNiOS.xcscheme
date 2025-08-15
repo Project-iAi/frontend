@@ -62,13 +62,13 @@
       </BuildableProductRunnable>
       <EnvironmentVariables>
          <EnvironmentVariable
-            key = "RCT_METRO_HOST = 192.168.45.118"
-            value = ""
+            key = "RCT_METRO_HOST"
+            value = "localhost"
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
-            key = "RCT_METRO_PORT = 8081"
-            value = ""
+            key = "RCT_METRO_PORT"
+            value = "8081"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>

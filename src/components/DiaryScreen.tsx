@@ -80,7 +80,7 @@ const DiaryScreen = () => {
           // 스토어 타입(DiaryEntry)에 맞게 createdAt을 문자열로 변환
           setCurrentDiary({
             ...diary,
-            createdAt: new Date(diary.createdAt).toISOString(),
+            createdAt: new Date(diary.createdAt),
           } as any);
           setIsGenerating(false);
           

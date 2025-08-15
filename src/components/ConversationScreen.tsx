@@ -402,7 +402,7 @@ const ConversationScreen = () => {
       // 스토어에 일기 데이터 저장 (createdAt을 string으로 변환)
       const diaryEntry = {
         ...diary,
-        createdAt: new Date(diary.createdAt).toISOString(),
+        createdAt: new Date(diary.createdAt),
       };
       setCurrentDiary(diaryEntry);
       addDiaryEntry(diaryEntry);

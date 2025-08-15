@@ -70,7 +70,7 @@ export interface DiaryEntry {
   content: string; // 일기 내용
   summary: string; // 대화 요약
   imageUrl?: string; // 생성된 그림 URL
-  createdAt: string; // 생성 시간
+  createdAt: Date; // 생성 시간
 }
 
 // 앱 상태 관련 타입
