@@ -74,12 +74,12 @@ const CollectionScreen = () => {
         const diaries = await apiService.getAllDiaries();
         console.log('✅ 모든 일기 불러오기 완료:', diaries);
         console.log('📊 일기 개수:', diaries.length);
-        // 타입 변환: createdAt을 문자열(ISO)로 변환하여 스토어 타입과 일치
+        // 타입 변환: createdAt을 Date 객체로 변환하여 타입과 일치
         const normalized = diaries.map((d: any) => ({
           ...d,
           createdAt: new Date(d.createdAt),
         }));
-        setBackendDiaries(normalized as any);
+        setBackendDiaries(normalized as DiaryEntry[]);
         
         // 각 일기의 날짜 로그
         diaries.forEach((diary: any, index: number) => {

@@ -19,7 +19,7 @@ import { useAppStore } from '../store/useAppStore';
 import { characterGreetings } from '../utils/data';
 import { SIZES } from '../utils/constants';
 import { images } from '../assets';
-import { apiService, socketService } from '../services';
+import { apiService, socketService } from '../services/index';
 import type { SocketMessage, ProcessingStatus } from '../services/api';
 import Sound from 'react-native-sound';
 import RNFS from 'react-native-fs';
@@ -148,18 +148,7 @@ const ConversationScreen = () => {
     initRecorder();
   }, []);
 
-  const requestMicPermissionAndroid = async () => {
-    if (Platform.OS !== 'android') return true;
-    try {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
-      );
-      return granted === PermissionsAndroid.RESULTS.GRANTED;
-    } catch (e) {
-      console.error('마이크 권한 요청 실패:', e);
-      return false;
-    }
-  };
+  // (권한 함수 미사용: 제거)
 
   const startRecording = async () => {
     if (isRecording) return;
@@ -251,6 +240,39 @@ const ConversationScreen = () => {
       Alert.alert('오류', `음성을 재생할 수 없습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     }
   }, [currentSound]);
+
+  // 일기 생성: useEffect에서 참조되므로 위로 올림
+  const createDiary = useCallback(async () => {
+    if (!roomId) {
+      Alert.alert('오류', '채팅방 정보가 없습니다.');
+      return;
+    }
+
+    try {
+      if (diaryRequested) {
+        console.log('일기 생성 중복 요청 방지: 이미 요청됨');
+        return;
+      }
+      setDiaryRequested(true);
+      setIsCreatingDiary(true);
+      console.log('일기 생성 중...');
+      const diary = await apiService.createDiary(roomId);
+      console.log('일기 생성 완료:', diary);
+      const diaryEntry = {
+        ...diary,
+        createdAt: new Date(diary.createdAt),
+      };
+      setCurrentDiary(diaryEntry);
+      addDiaryEntry(diaryEntry);
+      setCurrentStep('diary');
+    } catch (error) {
+      console.error('일기 생성 실패:', error);
+      Alert.alert('오류', '일기 생성에 실패했습니다.');
+      setDiaryRequested(false);
+    } finally {
+      setIsCreatingDiary(false);
+    }
+  }, [roomId, diaryRequested, setCurrentDiary, addDiaryEntry, setCurrentStep]);
 
   // WebSocket 연결 설정 (실시간 채팅 전용)
   useEffect(() => {
@@ -381,44 +403,7 @@ const ConversationScreen = () => {
     }
   };
 
-  // 일기 생성
-  const createDiary = useCallback(async () => {
-    if (!roomId) {
-      Alert.alert('오류', '채팅방 정보가 없습니다.');
-      return;
-    }
-
-    try {
-      if (diaryRequested) {
-        console.log('일기 생성 중복 요청 방지: 이미 요청됨');
-        return;
-      }
-      setDiaryRequested(true);
-      setIsCreatingDiary(true);
-      console.log('일기 생성 중...');
-      const diary = await apiService.createDiary(roomId);
-      console.log('일기 생성 완료:', diary);
-      
-      // 스토어에 일기 데이터 저장 (createdAt을 string으로 변환)
-      const diaryEntry = {
-        ...diary,
-        createdAt: new Date(diary.createdAt),
-      };
-      setCurrentDiary(diaryEntry);
-      addDiaryEntry(diaryEntry);
-      
-      // DiaryScreen으로 이동
-      setCurrentStep('diary');
-      
-    } catch (error) {
-      console.error('일기 생성 실패:', error);
-      Alert.alert('오류', '일기 생성에 실패했습니다.');
-      setDiaryRequested(false);
-    }
-    finally {
-      setIsCreatingDiary(false);
-    }
-  }, [roomId, setCurrentDiary, addDiaryEntry, setCurrentStep]);
+  // (중복 정의 제거됨)
 
   const handleBack = () => {
     setCurrentStep('character');
