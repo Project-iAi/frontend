@@ -8,10 +8,12 @@ import {
   ScrollView,
   ImageBackground,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { SIZES } from '../utils/constants';
 import { images } from '../assets';
+import { apiService } from '../services/index';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -19,15 +21,19 @@ const DiaryScreen = () => {
   const {
     currentConversation,
     selectedCharacter,
-    selectedEmotion,
-    selectedConcept,
     user,
     setCurrentStep,
-    addDiaryEntry,
+    currentDiary,
+    setCurrentDiary,
   } = useAppStore();
 
   const [isGenerating, setIsGenerating] = useState(true);
   const [diaryContent, setDiaryContent] = useState('');
+  const [textLinesCount, setTextLinesCount] = useState(0);
+  const LINE_HEIGHT = 32; // styles.diaryContent.lineHeight와 동일하게 유지 (행간 확대)
+  const UNDERLINE_OFFSET = 4; // 글과 밑줄 사이 간격
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleBack = () => {
     setCurrentStep('collection');
@@ -41,17 +47,7 @@ const DiaryScreen = () => {
     setCurrentStep('concept');
   };
 
-  const formatTextToNotebook = (text: string, charsPerLine: number = 18) => {
-    const words = text.split('');
-    const lines = [];
-    
-    for (let i = 0; i < words.length; i += charsPerLine) {
-      const line = words.slice(i, i + charsPerLine).join('');
-      lines.push(line);
-    }
-    
-    return lines;
-  };
+  // 사용하지 않는 유틸 제거됨
 
   const getCurrentDate = () => {
     const now = new Date();
@@ -62,38 +58,47 @@ const DiaryScreen = () => {
   };
 
   useEffect(() => {
-    // 일기 생성 시뮬레이션
-    if (isGenerating && currentConversation && selectedCharacter && user) {
-      setTimeout(() => {
-        const emotionText = {
-          happy: '기쁜',
-          sad: '슬픈',
-          angry: '화난',
-        }[selectedEmotion || 'happy'];
-
-        const generatedContent = `${user.child.name}는 오늘 ${emotionText} 마음으로 ${selectedCharacter.name}와 함께 이야기를 나누었어요. ${currentConversation.messages
-          .filter(msg => msg.sender === 'user')
-          .map(msg => msg.content)
-          .join(' ')}라는 이야기를 나누며 서로의 마음을 이해했답니다. 이런 소중한 대화를 통해 ${user.child.name}는 더욱 성장할 수 있었어요.`;
-
-        setDiaryContent(generatedContent);
+    const fetchDiary = async () => {
+      // currentDiary가 있으면 그것을 사용 (일기 생성 직후)
+      if (currentDiary) {
+        setDiaryContent(currentDiary.content);
         setIsGenerating(false);
+        return;
+      }
 
-        // 일기 항목 추가
-        const diaryEntry = {
-          id: Date.now().toString(),
-          conversationId: currentConversation.id,
-          title: `${selectedCharacter.name}와의 대화`,
-          content: generatedContent,
-          createdAt: new Date(),
-          concept: selectedConcept!,
-        };
-        addDiaryEntry(diaryEntry);
-      }, 3000);
-    }
-  }, [isGenerating, currentConversation, selectedCharacter, selectedEmotion, user, selectedConcept, addDiaryEntry]);
+      // currentDiary가 없고 roomId가 있으면 API에서 조회
+      if (currentConversation?.roomId) {
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+          console.log('일기 조회 중...', currentConversation.roomId);
+          const diary = await apiService.getDiary(currentConversation.roomId);
+          console.log('일기 조회 완료:', diary);
+          
+          setDiaryContent(diary.content);
+          // 스토어 타입(DiaryEntry)에 맞게 createdAt을 문자열로 변환
+          setCurrentDiary({
+            ...diary,
+            createdAt: new Date(diary.createdAt),
+          } as any);
+          setIsGenerating(false);
+          
+        } catch (diaryError) {
+          console.error('일기 조회 실패:', diaryError);
+          setError('일기를 불러올 수 없습니다.');
+          setIsGenerating(false);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
 
-  if (!currentConversation || !selectedCharacter || !user) {
+    fetchDiary();
+  }, [currentDiary, currentConversation?.roomId, setCurrentDiary]);
+
+  // 기본 필수 정보 체크
+  if (!selectedCharacter || !user) {
     return (
       <ImageBackground 
         source={images.backgrounds.main} 
@@ -102,7 +107,7 @@ const DiaryScreen = () => {
       >
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>일기 정보가 없습니다</Text>
+            <Text style={styles.errorText}>정보가 없습니다</Text>
             <TouchableOpacity style={styles.errorBackButton} onPress={handleBack}>
               <Text style={styles.errorBackButtonText}>뒤로가기</Text>
             </TouchableOpacity>
@@ -112,7 +117,33 @@ const DiaryScreen = () => {
     );
   }
 
-  if (isGenerating) {
+  // 오류 상태
+  if (error) {
+    return (
+      <ImageBackground 
+        source={images.backgrounds.main} 
+        style={styles.container}
+        resizeMode="cover"
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity 
+              style={styles.errorBackButton} 
+              onPress={() => {
+                setError(null);
+                setIsLoading(true);
+              }}
+            >
+              <Text style={styles.errorBackButtonText}>다시 시도</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </ImageBackground>
+    );
+  }
+
+  if (isGenerating || isLoading) {
     return (
       <ImageBackground 
         source={images.backgrounds.main} 
@@ -122,8 +153,30 @@ const DiaryScreen = () => {
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.generatingContainer}>
             <View style={styles.loadingCard}>
-              <Text style={styles.loadingText}>일기를 생성하고 있어요...</Text>
+              <Text style={styles.generatingText}>
+                {isLoading ? '일기를 불러오고 있어요...' : '일기를 생성하고 있어요...'}
+              </Text>
             </View>
+          </View>
+        </SafeAreaView>
+      </ImageBackground>
+    );
+  }
+
+  // 일기 데이터가 없는 경우
+  if (!currentDiary) {
+    return (
+      <ImageBackground 
+        source={images.backgrounds.main} 
+        style={styles.container}
+        resizeMode="cover"
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>아직 일기가 생성되지 않았습니다</Text>
+            <TouchableOpacity style={styles.errorBackButton} onPress={handleBack}>
+              <Text style={styles.errorBackButtonText}>뒤로가기</Text>
+            </TouchableOpacity>
           </View>
         </SafeAreaView>
       </ImageBackground>
@@ -139,31 +192,45 @@ const DiaryScreen = () => {
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.diaryCard}>
-            {/* 날짜 영역 */}
             <View style={styles.dateContainer}>
               <Text style={styles.dateText}>{getCurrentDate()}</Text>
             </View>
 
-            {/* 그림 영역 */}
             <View style={styles.illustrationContainer}>
               <View style={styles.illustrationBox}>
-                <View style={styles.cloudContainer}>
-                  <Text style={styles.cloudEmoji}>☁️</Text>
-                </View>
-                <View style={styles.characterContainer}>
-                  <Text style={styles.characterEmoji}>🐻</Text>
-                </View>
+                {currentDiary?.imageUrl ? (
+                  <Image 
+                    source={{ uri: currentDiary.imageUrl }}
+                    style={styles.generatedImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.loadingImageContainer}>
+                    <Text style={styles.loadingText}>그림을 그리는 중...</Text>
+                  </View>
+                )}
               </View>
             </View>
 
-            {/* 일기 내용 영역 */}
             <View style={styles.contentContainer}>
               <View style={styles.notebookLines}>
-                {formatTextToNotebook(diaryContent).map((line, index) => (
-                  <View key={index} style={styles.lineContainer}>
-                    <Text style={styles.diaryContent}>{line}</Text>
-                  </View>
-                ))}
+                <View pointerEvents="none" style={styles.linesOverlay}>
+                  {Array.from({ length: Math.max(textLinesCount, 1) }).map((_, idx) => (
+                    <View key={idx} style={[styles.noteLine, { top: (idx + 1) * LINE_HEIGHT + UNDERLINE_OFFSET }]} />
+                  ))}
+                </View>
+                <Text 
+                  style={styles.diaryContent}
+                  onLayout={(e) => {
+                    const h = e.nativeEvent.layout.height;
+                    const lines = Math.ceil(h / LINE_HEIGHT);
+                    if (lines !== textLinesCount) {
+                      setTextLinesCount(lines);
+                    }
+                  }}
+                >
+                  {diaryContent}
+                </Text>
               </View>
             </View>
           </View>
@@ -267,6 +334,23 @@ const styles = StyleSheet.create({
   characterEmoji: {
     fontSize: 50,
   },
+  generatedImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+  },
+  loadingImageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F0F0F0',
+    borderRadius: 10,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
   contentContainer: {
     flex: 1,
     backgroundColor: '#FFF5F5',
@@ -279,23 +363,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF5F5',
     borderRadius: 15,
+    overflow: 'hidden',
+    position: 'relative',
   },
-  lineContainer: {
-    minHeight: 30,
+  linesOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+  noteLine: {
+    position: 'absolute',
+    height: 0,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
-    paddingVertical: 8,
-    marginBottom: 4,
-    paddingHorizontal: 8,
     width: '100%',
+  },
+  lineContainer: {
+    paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   diaryContent: {
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 32,
     color: '#333333',
     textAlign: 'left',
     flexWrap: 'wrap',
     width: '100%',
+    zIndex: 1,
+    backgroundColor: 'transparent',
+    fontFamily: 'Epilogue',
+    fontWeight: '600',
+    letterSpacing: 0.4,
   },
   errorContainer: {
     flex: 1,
@@ -365,7 +466,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
+  generatingText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333333',

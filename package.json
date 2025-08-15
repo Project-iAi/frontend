@@ -7,12 +7,20 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
+    "start:mock": "node -e \"const fs=require('fs');fs.writeFileSync('./src/config/appConfig.json', JSON.stringify({useMocks:true},null,2));console.log('[mock] useMocks=true 설정 완료');\" && react-native start",
+    "start:real": "node -e \"const fs=require('fs');fs.writeFileSync('./src/config/appConfig.json', JSON.stringify({useMocks:false},null,2));console.log('[real] useMocks=false 설정 완료');\" && react-native start",
     "test": "jest"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native/new-app-screen": "0.80.2",
     "react": "19.1.0",
     "react-native": "0.80.2",
+    "react-native-audio-record": "^0.2.2",
+    "react-native-fs": "^2.20.0",
+    "react-native-permissions": "^5.4.2",
+    "react-native-sound": "^0.12.0",
+    "socket.io-client": "^4.8.1",
     "zustand": "^5.0.7"
   },
   "devDependencies": {
@@ -30,6 +38,7 @@
     "@types/react": "^19.1.0",
     "@types/react-test-renderer": "^19.1.0",
     "eslint": "^8.19.0",
+    "cross-env": "^7.0.3",
     "jest": "^29.6.3",
     "prettier": "2.8.8",
     "react-test-renderer": "19.1.0",

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,7 @@ import {
   SafeAreaView,
   ImageBackground,
   Image,
-  Alert,
   Dimensions,
-  ScrollView,
 } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { SIZES } from '../utils/constants';
@@ -19,59 +17,9 @@ const { width: screenWidth } = Dimensions.get('window');
 
 const OnboardingScreen = () => {
   const { setCurrentStep } = useAppStore();
-  const [currentPage, setCurrentPage] = useState(0);
-  const scrollViewRef = useRef(null);
 
   const handleStart = () => {
-    try {
-      setCurrentStep('signup');
-    } catch (error) {
-      console.error('Error navigating to signup:', error);
-      Alert.alert('오류', '화면 이동 중 오류가 발생했습니다.');
-    }
-  };
-
-  const onboardingPages = [
-    {
-      id: 1,
-      title: '안녕! 오늘은 마음 속으로\n여행을 떠나볼 거야',
-      image: require('../assets/images/onboarding/page1.png'),
-      isLogo: false,
-    },
-    {
-      id: 2,
-      title: '마음 속 이야기를 들려줄\n준비가 됐나요?',
-      image: require('../assets/images/onboarding/page2.png'),
-      isLogo: false,
-    },
-    {
-      id: 3,
-      title: '하루하루 그림일기로\n기록을 남겨요',
-      image: require('../assets/images/onboarding/page3.png'),
-      isLogo: false,
-    },
-    {
-      id: 4,
-      title: '매일 쌓이는 추억을\n확인하세요',
-      image: require('../assets/images/onboarding/page4.png'),
-      isLogo: false,
-    },
-  ];
-
-  const handleScroll = (event: any) => {
-    const contentOffset = event.nativeEvent.contentOffset.x;
-    const page = Math.round(contentOffset / screenWidth);
-    setCurrentPage(page);
-  };
-
-  const goToPage = (pageIndex: number) => {
-    if (scrollViewRef.current) {
-      (scrollViewRef.current as any).scrollTo({
-        x: pageIndex * screenWidth,
-        animated: true,
-      });
-    }
-    setCurrentPage(pageIndex);
+    setCurrentStep('signup');
   };
 
   return (
@@ -82,92 +30,24 @@ const OnboardingScreen = () => {
         resizeMode="cover"
       >
         <SafeAreaView style={styles.safeArea}>
-          {/* 온보딩 슬라이드 */}
-          <ScrollView
-            ref={scrollViewRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-            style={styles.scrollView}
-          >
-            {/* 로고 페이지 */}
-            <View style={styles.logoPageContainer}>
-              <Image 
-                source={images.logos.iai} 
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
-            
-            {/* 온보딩 페이지들 */}
-            {onboardingPages.map((page) => (
-              <View key={page.id} style={styles.onboardingPageContainer}>
-                {/* 페이지 제목 */}
-                <View style={styles.titleContainer}>
-                  <ImageBackground 
-                    source={require('../assets/images/icons/cloud1.png')}
-                    style={styles.titleBackground}
-                    resizeMode="contain"
-                  >
-                    <Text style={styles.pageTitle}>
-                      {page.title}
-                    </Text>
-                  </ImageBackground>
-                </View>
-
-                {/* 온보딩 이미지 */}
-                <View style={styles.onboardingImageContainer}>
-                  <Image 
-                    source={page.image} 
-                    style={styles.onboardingImage}
-                    resizeMode="contain"
-                  />
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-
-          {/* 슬라이드 안내 화살표 */}
-          {currentPage === 0 && (
-            <View style={styles.arrowRightContainer}>
-              <Text style={styles.arrowText}>››</Text>
-            </View>
-          )}
-          {currentPage > 0 && currentPage < 4 && (
-            <View style={styles.arrowContainer}>
-              <Text style={styles.arrowText}>‹‹</Text>
-              <Text style={styles.arrowText}>››</Text>
-            </View>
-          )}
-          {currentPage === 4 && (
-            <View style={styles.arrowLeftContainer}>
-              <Text style={styles.arrowText}>‹‹</Text>
-            </View>
-          )}
-
-          {/* 점 인디케이터 */}
-          <View style={styles.indicatorContainer}>
-            {[0, ...onboardingPages.map((_, index) => index + 1)].map((_, _index) => (
-              <TouchableOpacity
-                key={_index}
-                style={[
-                  styles.indicatorDot,
-                  currentPage === _index && styles.activeIndicatorDot
-                ]}
-                onPress={() => goToPage(_index)}
-              />
-            ))}
+          <View style={styles.logoPageContainer}>
+            <Image 
+              source={images.logos.iai} 
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
 
-          {/* 버튼들 */}
           <View style={styles.buttonContainer}>
-            {currentPage === 4 && (
-              <TouchableOpacity style={styles.startButton} onPress={handleStart}>
-                <Text style={styles.startButtonText}>시작하기</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity style={styles.startButton} onPress={handleStart}>
+              <Text style={styles.startButtonText}>시작하기</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.startButton, styles.recordsButton]}
+              onPress={() => setCurrentStep('collection')}
+            >
+              <Text style={styles.recordsButtonText}>기록 보러가기</Text>
+            </TouchableOpacity>
           </View>
         </SafeAreaView>
       </ImageBackground>
@@ -298,6 +178,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SIZES.xl,
     paddingBottom: SIZES.xl,
+    marginTop: SIZES.xl * 3,
   },
   startButton: {
     backgroundColor: '#FFB6C1',
@@ -312,6 +193,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    marginTop: SIZES.xl,
   },
   startButtonText: {
     color: '#FFFFFF',
@@ -321,15 +203,15 @@ const styles = StyleSheet.create({
     fontFamily: 'Epilogue',
   },
   recordsButton: {
-    paddingVertical: SIZES.sm,
+    backgroundColor: 'transparent',
+    paddingVertical: SIZES.md,
+    elevation: 0,
   },
   recordsButtonText: {
-    color: '#FFFFFF',
+    color: '#888888',
     fontSize: 16,
     textDecorationLine: 'underline',
-    textShadowColor: 'rgba(0, 0, 0, 0.7)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    textShadowColor: 'transparent',
     fontFamily: 'Epilogue',
   },
   logoPageContainer: {

@@ -60,22 +60,22 @@ export interface Conversation {
   emotion: EmotionType;
   messages: Message[];
   createdAt: Date;
+  roomId?: number; // 백엔드 채팅방 ID
 }
 
 // 결과 관련 타입
 export interface DiaryEntry {
-  id: string;
-  conversationId: string;
-  title: string;
-  content: string;
-  createdAt: Date;
-  concept: ConceptType;
-  time?: string; // 시간 정보 (선택적)
+  id: number;
+  roomId: number;
+  content: string; // 일기 내용
+  summary: string; // 대화 요약
+  imageUrl?: string; // 생성된 그림 URL
+  createdAt: Date; // 생성 시간
 }
 
 // 앱 상태 관련 타입
 export interface AppState {
-  currentStep: 'onboarding' | 'signup' | 'concept' | 'character' | 'emotion' | 'conversation' | 'diary' | 'collection';
+  currentStep: 'onboarding' | 'signup' | 'concept' | 'character' | 'emotion' | 'conversation' | 'diary' | 'collection' | 'diaryDetail' | 'chatHistory';
   user: User | null;
   selectedConcept: ConceptType | null;
   selectedCharacter: Character | null;
@@ -83,4 +83,5 @@ export interface AppState {
   currentConversation: Conversation | null;
   conversations: Conversation[];
   diaryEntries: DiaryEntry[];
+  currentDiary: DiaryEntry | null; // 현재 보고 있는 일기
 } 
