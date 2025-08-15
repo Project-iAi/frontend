@@ -9,12 +9,39 @@ import {
   Image,
   Modal,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { SIZES } from '../utils/constants';
 import { images } from '../assets';
 import { Character, ConceptType, Conversation, DiaryEntry } from '../types';
-import { apiService } from '../services/api';
+import { apiService } from '../services/index';
+
+// 타임존 보정 유틸 (KST 기준)
+const KST = 'Asia/Seoul';
+const getYmdInTZ = (dateInput: string | Date, timeZone: string = KST) => {
+  const d = new Date(dateInput);
+  const fmt = new Intl.DateTimeFormat('ko-KR', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = fmt.formatToParts(d);
+  const year = Number(parts.find(p => p.type === 'year')?.value || '0');
+  const month = Number(parts.find(p => p.type === 'month')?.value || '0');
+  const day = Number(parts.find(p => p.type === 'day')?.value || '0');
+  return { year, month, day };
+};
+
+const formatTimeInTZ = (dateInput: string | Date, timeZone: string = KST) => {
+  return new Date(dateInput).toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone,
+  });
+};
 
 const CollectionScreen = () => {
   const {
@@ -47,10 +74,15 @@ const CollectionScreen = () => {
         const diaries = await apiService.getAllDiaries();
         console.log('✅ 모든 일기 불러오기 완료:', diaries);
         console.log('📊 일기 개수:', diaries.length);
-        setBackendDiaries(diaries);
+        // 타입 변환: createdAt을 문자열(ISO)로 변환하여 스토어 타입과 일치
+        const normalized = diaries.map((d: any) => ({
+          ...d,
+          createdAt: new Date(d.createdAt).toISOString(),
+        }));
+        setBackendDiaries(normalized as any);
         
         // 각 일기의 날짜 로그
-        diaries.forEach((diary, index) => {
+        diaries.forEach((diary: any, index: number) => {
           console.log(`📅 일기 ${index + 1}: ${diary.createdAt} (roomId: ${diary.roomId})`);
         });
       } catch (error) {
@@ -358,24 +390,22 @@ const CollectionScreen = () => {
   // 해당 날짜의 일기 항목들 가져오기 (백엔드 데이터만 사용)
   const getEntriesForDate = (date: Date) => {
     const backendEntries = backendDiaries.filter(entry => {
-      const entryDate = new Date(entry.createdAt);
-      const dateMatch = entryDate.getDate() === date.getDate() &&
-                       entryDate.getMonth() === date.getMonth() &&
-                       entryDate.getFullYear() === date.getFullYear();
-      
-      // 날짜별 로그 (디버깅용)
+      // 타임존 안정 비교(KST)
+      const { year, month, day } = getYmdInTZ(entry.createdAt, KST);
+      const y = date.getFullYear();
+      const m = date.getMonth() + 1;
+      const d = date.getDate();
+      const dateMatch = year === y && month === m && day === d;
       if (dateMatch) {
-        console.log(`📅 일치하는 일기 발견: ${date.toDateString()} - roomId: ${entry.roomId}`);
+        console.log(`📅 일치하는 일기 발견(KST): ${y}-${m}-${d} - roomId: ${entry.roomId}`);
       }
-      
       return dateMatch;
     });
-    
     console.log(`🗓️ ${date.getDate()}일 일기 개수:`, backendEntries.length);
     return backendEntries;
   };
 
-  // 날짜 클릭 핸들러 (기존 모달 방식 복원)
+  // 날짜 클릭 핸들러
   const handleDatePress = (date: Date) => {
     const entries = getEntriesForDate(date);
     if (entries.length > 0) {
@@ -431,7 +461,7 @@ const CollectionScreen = () => {
         
       } catch (error) {
         console.error('❌ 채팅 내역 불러오기 실패:', error);
-        alert('채팅 내역을 불러오는데 실패했습니다.');
+        Alert.alert('오류', '채팅 내역을 불러오는데 실패했습니다.');
       }
     } else {
       // 기존 mock 데이터인 경우
@@ -630,16 +660,12 @@ const CollectionScreen = () => {
               </Text>
               
               <ScrollView style={styles.entriesList}>
-                {selectedDate && getEntriesForDate(selectedDate).map((entry, index) => {
+                {selectedDate && getEntriesForDate(selectedDate).map((entry: any, index: number) => {
                   const isBackendEntry = 'roomId' in entry;
                   
                   // 백엔드 데이터인 경우
                   if (isBackendEntry) {
-                    const time = new Date(entry.createdAt).toLocaleTimeString('ko-KR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: true
-                    });
+                    const time = formatTimeInTZ(entry.createdAt, KST);
                     const title = entry.summary && entry.summary.length > 0 
                       ? entry.summary.slice(0, 30) + (entry.summary.length > 30 ? '...' : '')
                       : `${index + 1}번째 대화`;
@@ -654,7 +680,6 @@ const CollectionScreen = () => {
                             />
                             <View style={styles.entryTextContent}>
                               <Text style={styles.entryTitle}>{title}</Text>
-                              <Text style={styles.entrySubtitle}>roomId: {entry.roomId}</Text>
                             </View>
                           </View>
                           <Text style={styles.entryTime}>{time}</Text>
@@ -678,12 +703,12 @@ const CollectionScreen = () => {
                   }
                   
                   // Mock 데이터인 경우 (기존 로직)
-                  const title = entry.title;
-                  const time = entry.time;
-                  const characterImage = getCharacterImage(entry.title);
+                  const title = (entry as any).title;
+                  const time = (entry as any).time;
+                  const characterImage = getCharacterImage((entry as any).title);
                   
                   return (
-                    <View key={entry.id} style={styles.entryItem}>
+                    <View key={(entry as any).id} style={styles.entryItem}>
                       <View style={styles.entryHeader}>
                         <View style={styles.entryContent}>
                           <Image 

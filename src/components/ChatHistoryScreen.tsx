@@ -13,7 +13,7 @@ import {
 import { useAppStore } from '../store/useAppStore';
 import { SIZES } from '../utils/constants';
 import { images } from '../assets';
-import { apiService } from '../services/api';
+import { apiService } from '../services';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -48,8 +48,7 @@ const ChatHistoryScreen = () => {
     if (!selectedCharacter) {
       return images.allCharacters.ham.variant;
     }
-    
-    const characterMap: { [key: string]: any } = {
+    const map: { [key: string]: any } = {
       'ham_1': images.allCharacters.ham.variant,
       'fox_1': images.allCharacters.fox.variant,
       'lion_1': images.allCharacters.lion.variant,
@@ -60,8 +59,7 @@ const ChatHistoryScreen = () => {
       'rac_1': images.allCharacters.rac.variant,
       'bear_1': images.allCharacters.bear.variant,
     };
-    
-    return characterMap[selectedCharacter.id] || images.allCharacters.ham.variant;
+    return map[selectedCharacter.id] || images.allCharacters.ham.variant;
   };
 
   // 저장된 채팅 메시지 불러오기
@@ -111,14 +109,6 @@ const ChatHistoryScreen = () => {
 
     return (
       <View key={index} style={styles.messageContainer}>
-        {/* 발신자 표시 */}
-        <Text style={[
-          styles.senderLabel,
-          isUser ? styles.userSenderLabel : styles.aiSenderLabel
-        ]}>
-          {isUser ? '나' : 'AI'}
-        </Text>
-        
         {/* 메시지 말풍선 */}
         <View 
           style={[
@@ -169,15 +159,14 @@ const ChatHistoryScreen = () => {
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
 
-        {/* 제목 */}
+        {/* 날짜/시간만 표시 */}
         <View style={styles.titleContainer}>
-          <Text style={styles.titleText}>저장된 대화</Text>
-          <Text style={styles.subtitleText}>
-            {new Date(currentConversation.createdAt).toLocaleDateString('ko-KR')}
+          <Text style={styles.titleText}>
+            {new Date(currentConversation.createdAt).toLocaleString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })}
           </Text>
         </View>
 
-        {/* 캐릭터 이미지 */}
+        {/* 캐릭터 이미지 (대화 화면과 동일 크기/위치) */}
         <Image 
           source={getCharacterImage()} 
           style={styles.characterImage}
@@ -206,12 +195,7 @@ const ChatHistoryScreen = () => {
             </ScrollView>
           )}
           
-          {/* 읽기 전용 안내 */}
-          <View style={styles.readOnlyInfo}>
-            <Text style={styles.readOnlyText}>
-              📋 저장된 대화 기록입니다 (읽기 전용)
-            </Text>
-          </View>
+          {/* 읽기 전용 안내 제거 */}
         </View>
       </SafeAreaView>
     </ImageBackground>
@@ -264,7 +248,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   titleText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#333333',
   },
@@ -274,12 +258,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   characterImage: {
-    width: 200,
-    height: 200,
+    width: 280,
+    height: 280,
     position: 'absolute',
-    top: screenHeight * 0.12,
+    top: screenHeight * 0.1,
     left: '50%',
-    transform: [{ translateX: -100 }],
+    transform: [{ translateX: -140 }],
     zIndex: 1,
     backgroundColor: 'transparent',
   },
@@ -292,14 +276,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    elevation: 0,
     zIndex: 1,
   },
   loadingContainer: {

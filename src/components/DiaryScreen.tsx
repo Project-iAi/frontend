@@ -13,7 +13,7 @@ import {
 import { useAppStore } from '../store/useAppStore';
 import { SIZES } from '../utils/constants';
 import { images } from '../assets';
-import { apiService } from '../services/api';
+import { apiService } from '../services/index';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -29,6 +29,9 @@ const DiaryScreen = () => {
 
   const [isGenerating, setIsGenerating] = useState(true);
   const [diaryContent, setDiaryContent] = useState('');
+  const [textLinesCount, setTextLinesCount] = useState(0);
+  const LINE_HEIGHT = 32; // styles.diaryContent.lineHeight와 동일하게 유지 (행간 확대)
+  const UNDERLINE_OFFSET = 4; // 글과 밑줄 사이 간격
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,17 +47,7 @@ const DiaryScreen = () => {
     setCurrentStep('concept');
   };
 
-  const formatTextToNotebook = (text: string, charsPerLine: number = 18) => {
-    const words = text.split('');
-    const lines = [];
-    
-    for (let i = 0; i < words.length; i += charsPerLine) {
-      const line = words.slice(i, i + charsPerLine).join('');
-      lines.push(line);
-    }
-    
-    return lines;
-  };
+  // 사용하지 않는 유틸 제거됨
 
   const getCurrentDate = () => {
     const now = new Date();
@@ -84,7 +77,11 @@ const DiaryScreen = () => {
           console.log('일기 조회 완료:', diary);
           
           setDiaryContent(diary.content);
-          setCurrentDiary(diary);
+          // 스토어 타입(DiaryEntry)에 맞게 createdAt을 문자열로 변환
+          setCurrentDiary({
+            ...diary,
+            createdAt: new Date(diary.createdAt).toISOString(),
+          } as any);
           setIsGenerating(false);
           
         } catch (diaryError) {
@@ -195,12 +192,10 @@ const DiaryScreen = () => {
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.diaryCard}>
-            {/* 날짜 영역 */}
             <View style={styles.dateContainer}>
               <Text style={styles.dateText}>{getCurrentDate()}</Text>
             </View>
 
-            {/* 그림 영역 */}
             <View style={styles.illustrationContainer}>
               <View style={styles.illustrationBox}>
                 {currentDiary?.imageUrl ? (
@@ -217,14 +212,25 @@ const DiaryScreen = () => {
               </View>
             </View>
 
-            {/* 일기 내용 영역 */}
             <View style={styles.contentContainer}>
               <View style={styles.notebookLines}>
-                {formatTextToNotebook(diaryContent).map((line, index) => (
-                  <View key={index} style={styles.lineContainer}>
-                    <Text style={styles.diaryContent}>{line}</Text>
-                  </View>
-                ))}
+                <View pointerEvents="none" style={styles.linesOverlay}>
+                  {Array.from({ length: Math.max(textLinesCount, 1) }).map((_, idx) => (
+                    <View key={idx} style={[styles.noteLine, { top: (idx + 1) * LINE_HEIGHT + UNDERLINE_OFFSET }]} />
+                  ))}
+                </View>
+                <Text 
+                  style={styles.diaryContent}
+                  onLayout={(e) => {
+                    const h = e.nativeEvent.layout.height;
+                    const lines = Math.ceil(h / LINE_HEIGHT);
+                    if (lines !== textLinesCount) {
+                      setTextLinesCount(lines);
+                    }
+                  }}
+                >
+                  {diaryContent}
+                </Text>
               </View>
             </View>
           </View>
@@ -357,23 +363,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF5F5',
     borderRadius: 15,
+    overflow: 'hidden',
+    position: 'relative',
   },
-  lineContainer: {
-    minHeight: 30,
+  linesOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+  noteLine: {
+    position: 'absolute',
+    height: 0,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
-    paddingVertical: 8,
-    marginBottom: 4,
-    paddingHorizontal: 8,
     width: '100%',
+  },
+  lineContainer: {
+    paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   diaryContent: {
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 32,
     color: '#333333',
     textAlign: 'left',
     flexWrap: 'wrap',
     width: '100%',
+    zIndex: 1,
+    backgroundColor: 'transparent',
+    fontFamily: 'Epilogue',
+    fontWeight: '600',
+    letterSpacing: 0.4,
   },
   errorContainer: {
     flex: 1,

@@ -19,7 +19,8 @@ import { useAppStore } from '../store/useAppStore';
 import { characterGreetings } from '../utils/data';
 import { SIZES } from '../utils/constants';
 import { images } from '../assets';
-import { apiService, socketService, SocketMessage, ProcessingStatus } from '../services/api';
+import { apiService, socketService } from '../services';
+import type { SocketMessage, ProcessingStatus } from '../services/api';
 import Sound from 'react-native-sound';
 import RNFS from 'react-native-fs';
 import AudioRecord from 'react-native-audio-record';
@@ -48,6 +49,8 @@ const ConversationScreen = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [currentSound, setCurrentSound] = useState<Sound | null>(null);
+  const [isCreatingDiary, setIsCreatingDiary] = useState(false);
+  const [diaryRequested, setDiaryRequested] = useState(false);
   // 녹음 상태
   const [isRecording, setIsRecording] = useState(false);
   const [recordingHint, setRecordingHint] = useState<string | null>(null);
@@ -386,6 +389,12 @@ const ConversationScreen = () => {
     }
 
     try {
+      if (diaryRequested) {
+        console.log('일기 생성 중복 요청 방지: 이미 요청됨');
+        return;
+      }
+      setDiaryRequested(true);
+      setIsCreatingDiary(true);
       console.log('일기 생성 중...');
       const diary = await apiService.createDiary(roomId);
       console.log('일기 생성 완료:', diary);
@@ -393,7 +402,7 @@ const ConversationScreen = () => {
       // 스토어에 일기 데이터 저장 (createdAt을 string으로 변환)
       const diaryEntry = {
         ...diary,
-        createdAt: diary.createdAt instanceof Date ? diary.createdAt.toISOString() : diary.createdAt
+        createdAt: new Date(diary.createdAt).toISOString(),
       };
       setCurrentDiary(diaryEntry);
       addDiaryEntry(diaryEntry);
@@ -404,6 +413,10 @@ const ConversationScreen = () => {
     } catch (error) {
       console.error('일기 생성 실패:', error);
       Alert.alert('오류', '일기 생성에 실패했습니다.');
+      setDiaryRequested(false);
+    }
+    finally {
+      setIsCreatingDiary(false);
     }
   }, [roomId, setCurrentDiary, addDiaryEntry, setCurrentStep]);
 
@@ -571,6 +584,15 @@ const ConversationScreen = () => {
           </View>
         )}
       </SafeAreaView>
+      {/* 일기 생성 로딩 모달 */}
+      {isCreatingDiary && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingModal}>
+            <ActivityIndicator size="large" color="#FFB6C1" />
+            <Text style={styles.loadingModalText}>일기를 생성하고 있어요...</Text>
+          </View>
+        </View>
+      )}
     </ImageBackground>
   );
 };
@@ -719,6 +741,31 @@ const styles = StyleSheet.create({
     color: '#333333',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 999,
+  },
+  loadingModal: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: SIZES.xl,
+    alignItems: 'center',
+    width: '70%',
+  },
+  loadingModalText: {
+    marginTop: SIZES.md,
+    fontSize: 16,
+    color: '#333333',
+    fontWeight: '600',
+    textAlign: 'center',
   },
   backButton: {
     position: 'absolute',

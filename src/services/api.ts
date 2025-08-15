@@ -50,8 +50,8 @@ const getBaseURL = () => {
   return `http://${host}:3000`;
 };
 
-const API_BASE_URL = getBaseURL();
-const SOCKET_URL = API_BASE_URL;
+export const API_BASE_URL = getBaseURL();
+export const SOCKET_URL = API_BASE_URL;
 
 // 타입 정의
 export interface ChatRoom {

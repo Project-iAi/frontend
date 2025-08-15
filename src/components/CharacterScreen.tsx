@@ -19,7 +19,7 @@ import { Character } from '../types';
 import { EmotionType } from '../types';
 import { Conversation } from '../types';
 import { characterGreetings } from '../utils/data';
-import { apiService } from '../services/api';
+import { apiService } from '../services/index';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = screenWidth * 0.4;
@@ -264,7 +264,12 @@ const CharacterScreen = () => {
         console.error('채팅방 생성 실패:', error);
         // 사용자에게 에러 알림
         const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-        alert(`채팅방 생성 실패: ${errorMessage}`);
+        // eslint-disable-next-line no-alert
+        // React Native에서는 Alert를 사용하므로 대체
+        // @ts-ignore
+        import('react-native').then(({ Alert }) => {
+          Alert.alert('오류', `채팅방 생성 실패: ${errorMessage}`);
+        });
       }
     } else {
       console.log('Missing selectedCharacterState');
@@ -588,14 +593,7 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH * 1.2,
     height: CARD_HEIGHT * 1.2,
     borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 1,
+    elevation: 0,
     opacity: 0.4,
     justifyContent: 'center',
     alignItems: 'center',
@@ -604,9 +602,7 @@ const styles = StyleSheet.create({
   selectedCard: {
     width: CARD_WIDTH * 2.5,
     height: CARD_HEIGHT * 2.5,
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 5,
+    elevation: 0,
     opacity: 1,
   },
   cardImage: {
@@ -623,14 +619,6 @@ const styles = StyleSheet.create({
     paddingVertical: SIZES.sm,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 25,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
     borderWidth: 2,
     borderColor: 'rgba(255, 182, 193, 0.3)',
   },
@@ -650,14 +638,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 20,
     padding: SIZES.lg,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
+    elevation: 0,
     borderWidth: 2,
     borderColor: 'rgba(255, 182, 193, 0.3)',
     width: screenWidth * 0.85,
@@ -682,14 +663,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: SIZES.xl,
     marginHorizontal: SIZES.xl,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
+    elevation: 0,
   },
   modalTitle: {
     fontSize: 18,
@@ -733,14 +707,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: SIZES.xl,
     marginHorizontal: SIZES.xl,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
+    elevation: 0,
   },
   emotionModalTitle: {
     fontSize: 24,
