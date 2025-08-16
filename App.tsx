@@ -28,8 +28,8 @@ LogBox.ignoreLogs([
   'AsyncStorage has been extracted',
 ]);
 
-const DESIGN_WIDTH = 410;   // iPhone 논리 폭(조절 가능)
-const DESIGN_HEIGHT = 900;
+const DESIGN_WIDTH = 393;   // iPhone 16/16 Pro 기준
+const DESIGN_HEIGHT = 852;  // iPhone 16/16 Pro 기준
 const SCREEN_SCALE = 1;   // iPad 화면 대비 프레임 가로/세로 90% 사용 (조절 가능)
 
 const PhoneFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {

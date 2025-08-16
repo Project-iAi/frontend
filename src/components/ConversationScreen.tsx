@@ -549,7 +549,7 @@ const ConversationScreen = () => {
         />
 
         {/* 채팅 창 */}
-        <View style={[styles.chatContainer, { height: layoutHeight * 0.7 }]}>
+        <View style={[styles.chatContainer, { height: layoutHeight * 0.68 }]}>
           {/* 연결 상태 표시 - 채팅창 상단 */}
           <View style={styles.statusContainer}>
             <Text style={styles.statusText}>
@@ -652,7 +652,7 @@ const ConversationScreen = () => {
                 style={styles.avatarImage}
                 resizeMode="contain"
               />
-              {quizCorrect && <Text style={styles.hatIcon}>🎩</Text>}
+              {quizCorrect && <Text style={[styles.hatIcon, { marginLeft: -10 }]}>🎩</Text>}
             </View>
             {!quizCorrect && (
               <>
@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
   },
   chatContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: -10, // 10px 아래로 이동
     left: 0,
     right: 0,
     height: screenHeight * 0.65,
@@ -873,7 +873,7 @@ const styles = StyleSheet.create({
   },
   quizOptionButton: {
     backgroundColor: '#FFB6C1',
-    paddingHorizontal: SIZES.lg,
+    paddingHorizontal: SIZES.md, // 가로 크기 줄임
     paddingVertical: SIZES.sm,
     borderRadius: 12,
   },
@@ -887,6 +887,8 @@ const styles = StyleSheet.create({
   quizOptionsRow: {
     flexDirection: 'row',
     marginTop: SIZES.sm,
+    justifyContent: 'space-around', // 버튼들 사이 간격 균등 분배
+    width: '100%',
   },
   quizOptionButtonCustom: {
     paddingHorizontal: SIZES.md,

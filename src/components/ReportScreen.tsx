@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,43 @@ import {
   ImageBackground,
   Image,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { SIZES } from '../utils/constants';
 import { images } from '../assets';
+import { apiService, ParentReport } from '../services';
 
 const ReportScreen = () => {
-  const { setCurrentStep, selectedReportDate } = useAppStore();
+  const { setCurrentStep, selectedReportDate, jwtToken, currentConversation } = useAppStore();
+  const [report, setReport] = useState<ParentReport | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // API에서 리포트 데이터 가져오기
+  useEffect(() => {
+    const fetchReport = async () => {
+      if (!selectedReportDate || !currentConversation?.roomId || !jwtToken) {
+        setError('리포트를 불러올 수 없습니다.');
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const reportData = await apiService.getParentReport(currentConversation.roomId, jwtToken);
+        setReport(reportData);
+      } catch (err) {
+        console.error('리포트 조회 실패:', err);
+        setError('리포트를 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReport();
+  }, [selectedReportDate, currentConversation?.roomId, jwtToken]);
 
   const handleBack = () => {
     setCurrentStep('collection');
@@ -28,25 +58,6 @@ const ReportScreen = () => {
     setCurrentStep('concept');
   };
 
-  // 리포트 메시지 생성 함수
-  const getReportMessage = (date: Date) => {
-    const reports = [
-      "오늘은 햄삐가 기분이 조금 안 좋았네요! 기분을 산책으로 잘 다스려주세요!",
-      "오늘은 냥삐가 정말 신났어요! 함께 놀아주셔서 감사해요!",
-      "오늘은 래삐가 조금 외로워했어요! 따뜻한 말로 위로해주세요!",
-      "오늘은 여삐가 새로운 것을 배우고 싶어해요! 함께 탐험해보세요!",
-      "오늘은 아리삐가 친구들과 잘 지내고 있어요! 대화를 많이 나눠주세요!",
-      "오늘은 구리삐가 창의적인 생각을 하고 있어요! 아이디어를 들어보세요!",
-      "오늘은 사삐가 리더십을 발휘하고 있어요! 응원해주세요!",
-      "오늘은 멍삐가 충성스럽게 지켜주고 있어요! 사랑으로 보답해주세요!",
-      "오늘은 고미삐가 평화로운 시간을 보내고 있어요! 편안한 분위기를 만들어주세요!"
-    ];
-    
-    // 날짜에 따라 다른 리포트 반환
-    const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
-    return reports[dayOfYear % reports.length];
-  };
-
   const formatReportDate = (date: Date) => {
     const options: Intl.DateTimeFormatOptions = {
       year: 'numeric', 
@@ -56,6 +67,17 @@ const ReportScreen = () => {
     };
     return new Intl.DateTimeFormat('ko-KR', options).format(date);
   };
+
+  // 점수를 시각적으로 표시하는 함수
+  const renderScoreBar = (score: number, label: string) => (
+    <View style={styles.scoreItem}>
+      <Text style={styles.scoreLabel}>{label}</Text>
+      <View style={styles.scoreBarContainer}>
+        <View style={[styles.scoreBar, { width: `${score * 10}%` }]} />
+      </View>
+      <Text style={styles.scoreText}>{score}/10</Text>
+    </View>
+  );
 
   if (!selectedReportDate) {
     return (
@@ -67,6 +89,42 @@ const ReportScreen = () => {
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>리포트 날짜가 선택되지 않았습니다</Text>
+            <TouchableOpacity style={styles.errorBackButton} onPress={handleBack}>
+              <Text style={styles.errorBackButtonText}>뒤로가기</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </ImageBackground>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <ImageBackground 
+        source={images.backgrounds.main} 
+        style={styles.container}
+        resizeMode="cover"
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>리포트를 불러오는 중...</Text>
+          </View>
+        </SafeAreaView>
+      </ImageBackground>
+    );
+  }
+
+  if (error || !report) {
+    return (
+      <ImageBackground 
+        source={images.backgrounds.main} 
+        style={styles.container}
+        resizeMode="cover"
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error || '리포트를 불러올 수 없습니다'}</Text>
             <TouchableOpacity style={styles.errorBackButton} onPress={handleBack}>
               <Text style={styles.errorBackButtonText}>뒤로가기</Text>
             </TouchableOpacity>
@@ -102,26 +160,72 @@ const ReportScreen = () => {
               </Text>
             </View>
 
-            {/* 리포트 제목 */}
-            <View style={styles.titleContainer}>
-              <Text style={styles.titleText}>부모님께 전하는 리포트</Text>
+            {/* 전체 평가 점수 */}
+            <View style={styles.overallScoreContainer}>
+              <Text style={styles.overallScoreTitle}>전체 평가</Text>
+              <Text style={styles.overallScoreValue}>{report.overallScore.toFixed(1)}점</Text>
             </View>
 
-            {/* 리포트 내용 */}
-            <View style={styles.reportContent}>
-              <Text style={styles.reportMessage}>
-                {getReportMessage(selectedReportDate)}
-              </Text>
+            {/* 감정 상태 */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>감정 상태</Text>
+              <Text style={styles.sectionContent}>{report.emotionalState}</Text>
             </View>
 
-            {/* 추가 조언 */}
-            <View style={styles.adviceContainer}>
-              <Text style={styles.adviceTitle}>💡 오늘의 조언</Text>
-              <Text style={styles.adviceText}>
-                아이와 함께하는 시간이 가장 소중합니다. 
-                대화를 통해 아이의 마음을 이해하고, 
-                따뜻한 관심으로 성장을 도와주세요.
-              </Text>
+            {/* 관심사 */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>관심사</Text>
+              <View style={styles.interestsContainer}>
+                {report.interests.map((interest: string, index: number) => (
+                  <View key={index} style={styles.interestTag}>
+                    <Text style={styles.interestText}>{interest}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* 언어 발달 */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>언어 발달</Text>
+              <Text style={styles.sectionContent}>{report.languageDevelopment}</Text>
+            </View>
+
+            {/* 사회성 */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>사회성</Text>
+              <Text style={styles.sectionContent}>{report.socialSkills}</Text>
+            </View>
+
+            {/* 주요 하이라이트 */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>주요 하이라이트</Text>
+              {report.highlights.map((highlight: string, index: number) => (
+                <Text key={index} style={styles.highlightText}>• {highlight}</Text>
+              ))}
+            </View>
+
+            {/* 제안사항 */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>제안사항</Text>
+              {report.suggestions.map((suggestion: string, index: number) => (
+                <Text key={index} style={styles.suggestionText}>• {suggestion}</Text>
+              ))}
+            </View>
+
+            {/* 종합 평가 */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>종합 평가</Text>
+              <Text style={styles.sectionContent}>{report.overallAssessment}</Text>
+            </View>
+
+            {/* 발달 점수 */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>발달 점수</Text>
+              {renderScoreBar(report.developmentScores.language, '언어')}
+              {renderScoreBar(report.developmentScores.social, '사회성')}
+              {renderScoreBar(report.developmentScores.emotional, '감정')}
+              {renderScoreBar(report.developmentScores.creativity, '창의성')}
+              {renderScoreBar(report.developmentScores.curiosity, '호기심')}
             </View>
           </View>
 
@@ -150,23 +254,26 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: SIZES.lg,
-    paddingVertical: SIZES.xl,
+    paddingTop: SIZES.md, // 상단 여백 줄임
+    paddingBottom: SIZES.xl,
     alignItems: 'center',
   },
   momContainer: {
     alignItems: 'center',
-    marginBottom: SIZES.xl,
+    marginBottom: 0, // 아래 여백 완전 제거
+    marginTop: -SIZES.lg, // 위로 올림
   },
   momImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 180, // 더 크게 증가
+    height: 180, // 더 크게 증가
+    borderRadius: 90,
   },
   reportCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: SIZES.xl,
     width: '100%',
+    marginTop: -SIZES.lg, // 더 위로 올림
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -225,6 +332,107 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#1976D2',
     textAlign: 'center',
+  },
+  // 새로운 스타일들
+  overallScoreContainer: {
+    alignItems: 'center',
+    marginBottom: SIZES.lg,
+    paddingVertical: SIZES.md,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 15,
+  },
+  overallScoreTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666666',
+    marginBottom: SIZES.xs,
+  },
+  overallScoreValue: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#007AFF',
+  },
+  sectionContainer: {
+    marginBottom: SIZES.lg,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: SIZES.sm,
+  },
+  sectionContent: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#555555',
+  },
+  interestsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SIZES.sm,
+  },
+  interestTag: {
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: SIZES.md,
+    paddingVertical: SIZES.xs,
+    borderRadius: 20,
+  },
+  interestText: {
+    fontSize: 14,
+    color: '#1976D2',
+    fontWeight: '500',
+  },
+  highlightText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#555555',
+    marginBottom: SIZES.xs,
+  },
+  suggestionText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#555555',
+    marginBottom: SIZES.xs,
+  },
+  scoreItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SIZES.sm,
+  },
+  scoreLabel: {
+    width: 60,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333333',
+  },
+  scoreBarContainer: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    marginHorizontal: SIZES.sm,
+  },
+  scoreBar: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
+    borderRadius: 4,
+  },
+  scoreText: {
+    width: 40,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666666',
+    textAlign: 'right',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#666666',
+    marginTop: SIZES.md,
   },
   buttonContainer: {
     flexDirection: 'row',

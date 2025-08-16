@@ -90,6 +90,26 @@ export interface MeResponse {
   [key: string]: any;
 }
 
+// 부모 리포트 관련 타입
+export interface ParentReport {
+  emotionalState: string;
+  interests: string[];
+  languageDevelopment: string;
+  socialSkills: string;
+  highlights: string[];
+  suggestions: string[];
+  overallAssessment: string;
+  developmentScores: {
+    language: number;
+    social: number;
+    emotional: number;
+    creativity: number;
+    curiosity: number;
+  };
+  overallScore: number;
+  createdAt: string;
+}
+
 export interface CreateChatRoomRequest {
   characterId: number;
   emotion: string;
@@ -395,6 +415,32 @@ export const apiService = {
       return result;
     } catch (error) {
       console.error('💥 내 정보 조회 API 오류:', error);
+      throw error;
+    }
+  },
+
+  // 부모 리포트 조회
+  getParentReport: async (roomId: number, jwtToken: string): Promise<ParentReport> => {
+    try {
+      console.log('📊 부모 리포트 조회 요청:', roomId);
+      const response = await fetch(`${API_BASE_URL}/diary/room/${roomId}/parent-report`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ 부모 리포트 조회 API 오류:', errorText);
+        throw new Error(`부모 리포트 조회 실패: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ 부모 리포트 조회 성공:', result);
+      return result;
+    } catch (error) {
+      console.error('💥 부모 리포트 조회 API 오류:', error);
       throw error;
     }
   },
