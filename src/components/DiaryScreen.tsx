@@ -49,12 +49,38 @@ const DiaryScreen = () => {
 
   // 사용하지 않는 유틸 제거됨
 
-  const getCurrentDate = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const day = now.getDate();
-    return `${year}년 ${month}월 ${day}일`;
+  // 감정 한글/이모지 매핑
+  const emotionToKorean = (emotion?: string) => {
+    if (!emotion) return undefined;
+    const map: Record<string, string> = { happy: '기쁨', sad: '슬픔', angry: '화남' };
+    return map[emotion] || undefined;
+  };
+  const emotionToEmoji = (emotion?: string) => {
+    if (!emotion) return undefined;
+    const map: Record<string, string> = { happy: '😊', sad: '😢', angry: '😠' };
+    return map[emotion] || undefined;
+  };
+
+  const formatDiaryDateTimeKST = () => {
+    const base = currentDiary?.createdAt ? new Date(currentDiary.createdAt) : new Date();
+    // 날짜
+    const ymd = new Intl.DateTimeFormat('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(base);
+    // 시간 (오전/오후 hh:mm)
+    const hm = new Intl.DateTimeFormat('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }).format(base);
+    // ymd는 2025. 08. 15 형태 → 년/월/일로 치환
+    const [year, month, day] = ymd.replace(/\s/g, '').split('.').filter(Boolean);
+    const dateText = `${year}년 ${Number(month)}월 ${Number(day)}일`;
+    return `${dateText} ${hm}`;
   };
 
   useEffect(() => {
@@ -192,8 +218,18 @@ const DiaryScreen = () => {
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.diaryCard}>
-            <View style={styles.dateContainer}>
-              <Text style={styles.dateText}>{getCurrentDate()}</Text>
+            {/* 제목만 표시 (오늘의 기분은 날짜 옆에서만) */}
+            <View style={styles.titleContainer}>
+              <Text style={styles.titleText}>{`${selectedCharacter?.name ?? '캐릭터'}와의 대화`}</Text>
+            </View>
+            {/* 날짜 + 오늘의 기분 */}
+            <View style={styles.dateRow}>
+              <Text style={styles.dateText}>{formatDiaryDateTimeKST()}</Text>
+              {currentConversation?.emotion && (
+                <Text style={styles.moodText}>
+                  오늘의 기분: {emotionToKorean(currentConversation.emotion)}{emotionToEmoji(currentConversation.emotion) ? ` ${emotionToEmoji(currentConversation.emotion)}` : ''}
+                </Text>
+              )}
             </View>
 
             <View style={styles.illustrationContainer}>
@@ -300,13 +336,29 @@ const styles = StyleSheet.create({
     elevation: 5,
     minHeight: screenHeight * 0.7,
   },
-  dateContainer: {
+  titleContainer: {
+    marginBottom: SIZES.xs,
+  },
+  titleText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333333',
+  },
+  dateRow: {
     marginBottom: SIZES.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   dateText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333333',
+  },
+  moodText: {
+    fontSize: 16,
+    color: '#666666',
+    fontWeight: '600',
   },
   illustrationContainer: {
     marginBottom: SIZES.lg,

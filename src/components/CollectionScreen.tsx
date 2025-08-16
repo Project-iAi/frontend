@@ -14,7 +14,7 @@ import {
 import { useAppStore } from '../store/useAppStore';
 import { SIZES } from '../utils/constants';
 import { images } from '../assets';
-import { Character, ConceptType, Conversation, DiaryEntry } from '../types';
+import { Character, ConceptType, Conversation, DiaryEntry, EmotionType } from '../types';
 import { apiService } from '../services/index';
 
 // 타임존 보정 유틸 (KST 기준)
@@ -357,6 +357,19 @@ const CollectionScreen = () => {
       default:
         return images.icons.school;
     }
+  };
+
+  // 감정 한글 변환
+  const emotionToKorean = (emotion?: EmotionType | string) => {
+    if (!emotion) return undefined;
+    const map: Record<string, string> = { happy: '기쁨', sad: '슬픔', angry: '화남' };
+    return map[emotion as string] || undefined;
+  };
+
+  const emotionToEmoji = (emotion?: EmotionType | string) => {
+    if (!emotion) return undefined;
+    const map: Record<string, string> = { happy: '😊', sad: '😢', angry: '😠' };
+    return map[emotion as string] || undefined;
   };
 
   // 캐릭터 이미지 가져오기
@@ -713,9 +726,14 @@ const CollectionScreen = () => {
                   // 백엔드 데이터인 경우
                   if (isBackendEntry) {
                     const time = formatTimeInTZ(entry.createdAt, KST);
-                    const title = entry.summary && entry.summary.length > 0 
+                    // 저장된 대화에서 roomId 매칭 → 캐릭터/감정 복원
+                    const matched = conversations.find(c => c.roomId === entry.roomId);
+                    const meta = matched ? mapCharacterMeta(matched.characterId) : undefined;
+                    const title = meta ? `${meta.name}와의 대화` : (entry.summary && entry.summary.length > 0 
                       ? entry.summary.slice(0, 30) + (entry.summary.length > 30 ? '...' : '')
-                      : `${index + 1}번째 대화`;
+                      : `${index + 1}번째 대화`);
+                    const emotionKor = emotionToKorean(matched?.emotion);
+                    const emotionEmoji = emotionToEmoji(matched?.emotion);
                     
                     return (
                       <View key={entry.id} style={styles.entryItem}>
@@ -729,7 +747,12 @@ const CollectionScreen = () => {
                               <Text style={styles.entryTitle}>{title}</Text>
                             </View>
                           </View>
-                          <Text style={styles.entryTime}>{time}</Text>
+                          <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={styles.entryTime}>{time}</Text>
+                            {emotionKor && (
+                              <Text style={styles.entrySubtitle}>오늘의 기분: {emotionKor}{emotionEmoji ? ` ${emotionEmoji}` : ''}</Text>
+                            )}
+                          </View>
                         </View>
                         <View style={styles.entryButtons}>
                           <TouchableOpacity 

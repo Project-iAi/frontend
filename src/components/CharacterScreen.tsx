@@ -287,7 +287,7 @@ const CharacterScreen = () => {
         // 3. 상태 설정
         setSelectedCharacter(character);
         
-        // 4. 로컬 상태의 selectedEmotion을 사용 (상단에서 선언한 emotionToSet 재사용)
+        // 4. 전역 감정 설정
         console.log('Setting emotion to:', emotionToSet);
         
         // 5. 전역 상태에 감정 설정

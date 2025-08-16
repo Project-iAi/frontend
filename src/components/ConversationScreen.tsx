@@ -10,10 +10,12 @@ import {
   Alert,
   ImageBackground,
   Image,
+  Modal,
   Dimensions,
   ActivityIndicator,
   Platform,
   PermissionsAndroid,
+  InteractionManager,
 } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { characterGreetings } from '../utils/data';
@@ -51,6 +53,12 @@ const ConversationScreen = () => {
   const [currentSound, setCurrentSound] = useState<Sound | null>(null);
   const [isCreatingDiary, setIsCreatingDiary] = useState(false);
   const [diaryRequested, setDiaryRequested] = useState(false);
+  const [showCountdown, setShowCountdown] = useState(false);
+  const [countdown, setCountdown] = useState<number>(3);
+  const countdownTimerRef = useRef<any>(null);
+  const [quizCorrect, setQuizCorrect] = useState(false);
+  const [diaryReady, setDiaryReady] = useState(false);
+  const [quizFeedback, setQuizFeedback] = useState<'none' | 'wrong'>('none');
   // 녹음 상태
   const [isRecording, setIsRecording] = useState(false);
   const [recordingHint, setRecordingHint] = useState<string | null>(null);
@@ -58,6 +66,7 @@ const ConversationScreen = () => {
   
   const socketRef = useRef<any>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+  const inactivityTimerRef = useRef<any>(null);
   const roomId = currentConversation?.roomId;
 
   // 배경 이미지 가져오기
@@ -264,15 +273,43 @@ const ConversationScreen = () => {
       };
       setCurrentDiary(diaryEntry);
       addDiaryEntry(diaryEntry);
-      setCurrentStep('diary');
+      // 같은 모달에서 카운트다운 시작
+      setDiaryReady(true);
+      setCountdown(3);
+      setShowCountdown(true);
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+      }
+      countdownTimerRef.current = setInterval(() => {
+        setCountdown((prev) => Math.max(prev - 1, 0));
+      }, 1000);
     } catch (error) {
       console.error('일기 생성 실패:', error);
       Alert.alert('오류', '일기 생성에 실패했습니다.');
       setDiaryRequested(false);
     } finally {
+      // 성공 경로에서 이미 false 처리, 실패 시에만 여기서 끔
       setIsCreatingDiary(false);
     }
   }, [roomId, diaryRequested, setCurrentDiary, addDiaryEntry, setCurrentStep]);
+
+  // 카운트다운 종료 시 화면 전환 (렌더 중 setState 충돌 방지)
+  useEffect(() => {
+    if (showCountdown && countdown === 0) {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+      // 다음 틱으로 넘겨 안전하게 전환
+      setTimeout(() => {
+        setShowCountdown(false);
+        setQuizCorrect(false);
+        setDiaryReady(false);
+        setIsCreatingDiary(false);
+        setCurrentStep('diary');
+      }, 0);
+    }
+  }, [showCountdown, countdown, setCurrentStep]);
 
   // WebSocket 연결 설정 (실시간 채팅 전용)
   useEffect(() => {
@@ -300,6 +337,16 @@ const ConversationScreen = () => {
       // 메시지 수신
       socket.on('message', (message: SocketMessage) => {
         console.log('새 메시지 수신:', message);
+        // 대화 활동 감지 → 무응답 타이머 리셋
+        if (inactivityTimerRef.current) {
+          clearTimeout(inactivityTimerRef.current);
+        }
+        inactivityTimerRef.current = setTimeout(() => {
+          if (!diaryRequested) {
+            console.log('⏱️ 20초 무응답 → 자동 일기 생성');
+            createDiary();
+          }
+        }, 20000);
         
         setMessages(prev => {
           if (message.sender === 'ai') {
@@ -350,9 +397,10 @@ const ConversationScreen = () => {
       // 세션 타임아웃
       socket.on('sessionTimeout', (data: any) => {
         console.log('세션 타임아웃:', data);
-        Alert.alert('세션 만료', '20초 동안 대화가 없어 자동으로 일기를 생성합니다.', [
-          { text: '확인', onPress: () => createDiary() }
-        ]);
+        // 20초 이상 지속되지 않았을 때만 자동 생성 (중복 방지)
+        if (!diaryRequested) {
+          createDiary();
+        }
       });
 
       // 오류 처리
@@ -363,6 +411,10 @@ const ConversationScreen = () => {
 
       return () => {
         socketService.disconnect(socket);
+        if (inactivityTimerRef.current) {
+          clearTimeout(inactivityTimerRef.current);
+          inactivityTimerRef.current = null;
+        }
       };
     }
   }, [currentConversation?.roomId, playAudioFromBase64, createDiary]);
@@ -380,6 +432,16 @@ const ConversationScreen = () => {
     try {
       console.log('메시지 전송:', messageText);
       socketService.sendMessage(socketRef.current, roomId, messageText);
+      // 사용자 활동 → 무응답 타이머 리셋
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+      inactivityTimerRef.current = setTimeout(() => {
+        if (!diaryRequested) {
+          console.log('⏱️ 20초 무응답 → 자동 일기 생성');
+          createDiary();
+        }
+      }, 20000);
       
       // 사용자 메시지를 즉시 UI에 추가
       const userMessage: SocketMessage = {
@@ -410,20 +472,17 @@ const ConversationScreen = () => {
   };
 
   const handleEndConversation = () => {
-    Alert.alert(
-      '대화 종료',
-      '대화를 종료하고 일기를 생성하시겠습니까?',
-      [
-        {
-          text: '취소',
-          style: 'cancel',
-        },
-        {
-          text: '일기 생성',
-          onPress: () => createDiary(),
-        },
-      ]
-    );
+    if (diaryRequested) {
+      console.log('이미 일기 생성 요청됨: 중복 경로 차단');
+      return;
+    }
+    // 종료 버튼 누르면 모달을 즉시 표시하고, UI 프레임 이후 생성 요청
+    setIsCreatingDiary(true);
+    InteractionManager.runAfterInteractions(() => {
+      requestAnimationFrame(() => {
+        createDiary();
+      });
+    });
   };
 
   useEffect(() => {
@@ -458,11 +517,19 @@ const ConversationScreen = () => {
     );
   }
 
+  const [containerLayout, setContainerLayout] = useState<{ width: number; height: number } | null>(null);
+  const layoutWidth = containerLayout?.width ?? screenWidth;
+  const layoutHeight = containerLayout?.height ?? screenHeight;
+
   return (
     <ImageBackground 
       source={getBackground()} 
       style={styles.container}
       resizeMode="cover"
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        setContainerLayout({ width, height });
+      }}
     >
       <SafeAreaView style={styles.safeArea}>
         {/* 뒤로가기 버튼 */}
@@ -478,11 +545,16 @@ const ConversationScreen = () => {
         {/* 캐릭터 이미지 */}
         <Image 
           source={getCharacterImage()} 
-          style={styles.characterImage}
+          resizeMode="contain"
+          style={[
+            styles.characterImage,
+            selectedCharacter?.id === 'cat_1' && styles.characterImageCat,
+            { top: layoutHeight * 0.1 },
+          ]}
         />
 
         {/* 채팅 창 */}
-        <View style={styles.chatContainer}>
+        <View style={[styles.chatContainer, { height: layoutHeight * 0.65 }]}>
           {/* 연결 상태 표시 - 채팅창 상단 */}
           <View style={styles.statusContainer}>
             <Text style={styles.statusText}>
@@ -569,15 +641,68 @@ const ConversationScreen = () => {
           </View>
         )}
       </SafeAreaView>
-      {/* 일기 생성 로딩 모달 */}
-      {isCreatingDiary && (
+      {/* 일기 생성 로딩 모달 (최상단 오버레이) */}
+      <Modal
+        visible={isCreatingDiary}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingModal}>
-            <ActivityIndicator size="large" color="#FFB6C1" />
-            <Text style={styles.loadingModalText}>일기를 생성하고 있어요...</Text>
+            {/* 캐릭터 미니 이미지 (확대) + 모자 아이콘(정답 후에만) 오버레이 */}
+            <View style={styles.avatarContainer}>
+              <Image
+                source={getCharacterImage() || images.allCharacters.ham.variant}
+                style={styles.avatarImage}
+                resizeMode="contain"
+              />
+              {quizCorrect && <Text style={styles.hatIcon}>🎩</Text>}
+            </View>
+            {!quizCorrect && (
+              <>
+                <Text style={styles.loadingModalText}>작은 퀴즈를 풀어볼까요? 2 + 3 = ?</Text>
+                <View style={{ flexDirection: 'row', marginTop: SIZES.sm }}>
+                  {[3,5,6].map((opt) => (
+                    <TouchableOpacity key={opt} style={[styles.quizOptionButton, { paddingHorizontal: SIZES.md, paddingVertical: SIZES.sm }]} onPress={() => {
+                      if (opt === 5) {
+                        setQuizFeedback('none');
+                        setQuizCorrect(true);
+                      } else {
+                        setQuizFeedback('wrong');
+                      }
+                    }}>
+                      <Text style={[styles.quizOptionText, { fontSize: 16 }]}>{opt}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {quizFeedback === 'wrong' ? (
+                  <Text style={styles.quizWrongText}>틀렸어요! 다시 선택해보세요.</Text>
+                ) : (
+                  <Text style={[styles.loadingModalText, { marginTop: SIZES.sm, fontSize: 14 }]}>정답을 맞히면 축하 화면이 나와요!</Text>
+                )}
+              </>
+            )}
+
+            {quizCorrect && (
+              <>
+                <Text style={styles.rewardTitle}>축하해요! 모자 아이템을 받았어요 🎩</Text>
+                {/* 일기 준비가 완료되면 같은 모달에서 카운트다운 노출 */}
+                {diaryReady ? (
+                  <Text style={[styles.countdownText, { marginTop: SIZES.sm }]}>{countdown}</Text>
+                ) : (
+                  <View style={{ marginTop: SIZES.sm }}>
+                    <ActivityIndicator size="small" color="#FFB6C1" />
+                    <Text style={[styles.loadingModalText, { fontSize: 14 }]}>일기를 준비하고 있어요...</Text>
+                  </View>
+                )}
+              </>
+            )}
           </View>
         </View>
-      )}
+      </Modal>
+      {/* 카운트다운 모달 (최상단 오버레이) */}
+      {/* 별도의 카운트다운 모달 제거: 로딩 모달에서 함께 표시 */}
     </ImageBackground>
   );
 };
@@ -608,6 +733,12 @@ const styles = StyleSheet.create({
     transform: [{ translateX: -140 }],
     zIndex: 1,
     backgroundColor: 'transparent',
+  },
+  characterImageCat: {
+    width: 360,
+    height: 360,
+    top: screenHeight * 0.07,
+    transform: [{ translateX: -180 }],
   },
   chatContainer: {
     position: 'absolute',
@@ -736,7 +867,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 999,
+    zIndex: 9999,
   },
   loadingModal: {
     backgroundColor: '#FFFFFF',
@@ -745,12 +876,75 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '70%',
   },
+  quizOptionButton: {
+    backgroundColor: '#FFB6C1',
+    paddingHorizontal: SIZES.lg,
+    paddingVertical: SIZES.sm,
+    borderRadius: 12,
+  },
+  quizOptionText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    minWidth: 40,
+  },
   loadingModalText: {
     marginTop: SIZES.md,
     fontSize: 16,
     color: '#333333',
     fontWeight: '600',
     textAlign: 'center',
+  },
+  countdownModal: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: SIZES.xl,
+    paddingHorizontal: SIZES.xl,
+    alignItems: 'center',
+    width: '60%',
+  },
+  countdownText: {
+    fontSize: 64,
+    fontWeight: 'bold',
+    color: '#FF69B4',
+  },
+  countdownSubText: {
+    marginTop: SIZES.sm,
+    fontSize: 16,
+    color: '#333',
+  },
+  quizWrongText: {
+    marginTop: SIZES.sm,
+    fontSize: 14,
+    color: '#FF3B30',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  rewardTitle: {
+    marginTop: SIZES.sm,
+    fontSize: 18,
+    color: '#333333',
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  avatarContainer: {
+    width: 72,
+    height: 72,
+    marginBottom: SIZES.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarImage: {
+    width: 72,
+    height: 72,
+  },
+  hatIcon: {
+    position: 'absolute',
+    top: -8,
+    left: '50%',
+    transform: [{ translateX: -12 }, { rotate: '-10deg' }],
+    fontSize: 24,
   },
   backButton: {
     position: 'absolute',
@@ -912,6 +1106,7 @@ const styles = StyleSheet.create({
     marginLeft: SIZES.sm,
     color: '#FF3B30',
   },
+  // 아래 스타일은 상단에 이미 정의되어 중복 제거됨
 });
 
 export default ConversationScreen;
