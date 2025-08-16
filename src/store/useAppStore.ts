@@ -8,6 +8,10 @@ interface AppStore extends AppState {
   // 사용자 관리
   setUser: (user: User) => void;
   
+  // 인증 관리
+  setJwtToken: (token: string | null) => void;
+  setProfileCompleted: (completed: boolean) => void;
+  
   // 컨셉 및 캐릭터 관리
   setSelectedConcept: (concept: ConceptType) => void;
   setSelectedCharacter: (character: Character) => void;
@@ -34,6 +38,8 @@ interface AppStore extends AppState {
 const initialState: AppState = {
   currentStep: 'onboarding',
   user: null,
+  jwtToken: null,
+  profileCompleted: false,
   selectedConcept: null,
   selectedCharacter: null,
   selectedEmotion: null,
@@ -53,6 +59,14 @@ export const useAppStore = create<AppStore>((set) => ({
 
   setUser: (user) => {
     set({ user });
+  },
+
+  setJwtToken: (token) => {
+    set({ jwtToken: token });
+  },
+
+  setProfileCompleted: (completed) => {
+    set({ profileCompleted: completed });
   },
 
   setSelectedConcept: (concept) => {

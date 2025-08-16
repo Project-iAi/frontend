@@ -80,10 +80,16 @@ const CollectionScreen = () => {
         console.log('✅ 모든 일기 불러오기 완료:', diaries);
         console.log('📊 일기 개수:', diaries.length);
         // 타입 변환: createdAt을 Date 객체로 변환하여 타입과 일치
-        const normalized = diaries.map((d: any) => ({
-          ...d,
-          createdAt: new Date(d.createdAt),
-        }));
+        // UTC 시간을 한국 시간(KST)으로 변환
+        const normalized = diaries.map((d: any) => {
+          const utcDate = new Date(d.createdAt);
+          // UTC 시간에 9시간(KST) 추가
+          const kstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000));
+          return {
+            ...d,
+            createdAt: kstDate,
+          };
+        });
         setBackendDiaries(normalized as DiaryEntry[]);
         
         // 각 일기의 날짜 로그

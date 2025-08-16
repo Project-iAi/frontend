@@ -9,25 +9,28 @@ import {
   Alert,
   ImageBackground,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { SIZES } from '../utils/constants';
 import { images } from '../assets';
+import { apiService } from '../services';
 
 const SignupScreen = () => {
-  const { setCurrentStep, setUser } = useAppStore();
+  const { setCurrentStep, setUser, jwtToken } = useAppStore();
   const [childName, setChildName] = useState('');
-  const [childGender, setChildGender] = useState<'male' | 'female' | 'none'>('none');
+  const [childGender, setChildGender] = useState<'남자' | '여자'>('남자');
   const [childAge, setChildAge] = useState('');
-  const [parentName, setParentName] = useState('');
+  const [motherName, setMotherName] = useState('');
   const [interests, setInterests] = useState('');
   const [interestTags, setInterestTags] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleBack = () => {
     setCurrentStep('onboarding');
   };
 
-  const handleGenderSelect = (gender: 'male' | 'female' | 'none') => {
+  const handleGenderSelect = (gender: '남자' | '여자') => {
     setChildGender(gender);
   };
 
@@ -56,29 +59,56 @@ const SignupScreen = () => {
     setInterestTags(interestTags.filter(tag => tag !== tagToRemove));
   };
 
-  const handleNext = () => {
-    if (!childName || !childAge || !parentName) {
+  const handleNext = async () => {
+    if (!childName || !childAge || !motherName) {
       Alert.alert('알림', '필수 정보를 입력해주세요.');
       return;
     }
 
-    const user = {
-      child: {
-        id: '1',
-        name: childName,
-        gender: childGender,
-        age: parseInt(childAge, 10),
-        interests: interestTags,
-      },
-      parent: {
-        id: '1',
-        name: parentName,
-        relationship: '보호자',
-      },
-    };
+    if (!jwtToken) {
+      Alert.alert('오류', '인증 토큰이 없습니다. 다시 로그인해주세요.');
+      setCurrentStep('onboarding');
+      return;
+    }
 
-    setUser(user);
-    setCurrentStep('concept');
+    try {
+      setIsLoading(true);
+
+      // 백엔드 회원가입 API 호출
+      const signupData = {
+        childName,
+        childGender,
+        childAge: parseInt(childAge, 10),
+        motherName,
+        childInterests: interestTags,
+      };
+
+      await apiService.signup(signupData, jwtToken);
+
+      // 로컬 사용자 정보 저장
+      const user = {
+        child: {
+          id: '1',
+          name: childName,
+          gender: childGender === '남자' ? 'male' : 'female',
+          age: parseInt(childAge, 10),
+          interests: interestTags,
+        },
+        parent: {
+          id: '1',
+          name: motherName,
+          relationship: '엄마',
+        },
+      };
+
+      setUser(user);
+      setCurrentStep('concept');
+    } catch (error) {
+      console.error('💥 회원가입 오류:', error);
+      Alert.alert('오류', '회원가입에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -129,38 +159,26 @@ const SignupScreen = () => {
                 <TouchableOpacity 
                   style={[
                     styles.genderButton, 
-                    childGender === 'male' && styles.genderButtonSelected
+                    childGender === '남자' && styles.genderButtonSelected
                   ]} 
-                  onPress={() => handleGenderSelect('male')}
+                  onPress={() => handleGenderSelect('남자')}
                 >
                   <Text style={[
                     styles.genderButtonText,
-                    childGender === 'male' && styles.genderButtonTextSelected
-                  ]}>남성</Text>
+                    childGender === '남자' && styles.genderButtonTextSelected
+                  ]}>남자</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={[
                     styles.genderButton, 
-                    childGender === 'female' && styles.genderButtonSelected
+                    childGender === '여자' && styles.genderButtonSelected
                   ]} 
-                  onPress={() => handleGenderSelect('female')}
+                  onPress={() => handleGenderSelect('여자')}
                 >
                   <Text style={[
                     styles.genderButtonText,
-                    childGender === 'female' && styles.genderButtonTextSelected
-                  ]}>여성</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[
-                    styles.genderButton, 
-                    childGender === 'none' && styles.genderButtonSelected
-                  ]} 
-                  onPress={() => handleGenderSelect('none')}
-                >
-                  <Text style={[
-                    styles.genderButtonText,
-                    childGender === 'none' && styles.genderButtonTextSelected
-                  ]}>선택안함</Text>
+                    childGender === '여자' && styles.genderButtonTextSelected
+                  ]}>여자</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -178,14 +196,14 @@ const SignupScreen = () => {
               />
             </View>
 
-            {/* 보호자 이름 */}
+            {/* 엄마 이름 */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>보호자 이름</Text>
+              <Text style={styles.label}>엄마 이름</Text>
               <TextInput
                 style={styles.input}
-                placeholder="보호자 이름을 입력해주세요"
-                value={parentName}
-                onChangeText={setParentName}
+                placeholder="엄마 이름을 입력해주세요"
+                value={motherName}
+                onChangeText={setMotherName}
                 placeholderTextColor="#999"
                 autoComplete="off"
                 autoCorrect={false}
@@ -232,8 +250,16 @@ const SignupScreen = () => {
             </View>
 
             {/* 다음 버튼 */}
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.nextButtonText}>다음</Text>
+            <TouchableOpacity 
+              style={[styles.nextButton, isLoading && styles.nextButtonDisabled]} 
+              onPress={handleNext}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.nextButtonText}>다음</Text>
+              )}
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -373,6 +399,9 @@ const styles = StyleSheet.create({
     color: '#333',
     fontSize: 18,
     fontWeight: '600',
+  },
+  nextButtonDisabled: {
+    backgroundColor: '#CCCCCC',
   },
 });
 

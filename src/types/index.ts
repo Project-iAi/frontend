@@ -76,8 +76,10 @@ export interface DiaryEntry {
 
 // 앱 상태 관련 타입
 export interface AppState {
-  currentStep: 'onboarding' | 'signup' | 'concept' | 'character' | 'emotion' | 'conversation' | 'diary' | 'collection' | 'diaryDetail' | 'chatHistory' | 'report';
+  currentStep: 'onboarding' | 'kakaoLogin' | 'signup' | 'concept' | 'character' | 'emotion' | 'conversation' | 'diary' | 'collection' | 'diaryDetail' | 'chatHistory' | 'report';
   user: User | null;
+  jwtToken: string | null; // JWT 토큰
+  profileCompleted: boolean; // 프로필 완료 여부
   selectedConcept: ConceptType | null;
   selectedCharacter: Character | null;
   selectedEmotion: EmotionType | null;

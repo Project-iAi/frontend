@@ -57,13 +57,15 @@ const DiaryScreen = () => {
 
   const formatDiaryDate = (dateInput: Date) => {
     const d = new Date(dateInput);
+    // UTC 시간을 한국 시간(KST)으로 변환
+    const kstDate = new Date(d.getTime() + (9 * 60 * 60 * 1000));
     const options: Intl.DateTimeFormatOptions = {
       year: 'numeric', 
       month: 'long', 
       day: 'numeric',
       timeZone: 'Asia/Seoul', // KST
     };
-    return new Intl.DateTimeFormat('ko-KR', options).format(d);
+    return new Intl.DateTimeFormat('ko-KR', options).format(kstDate);
   };
 
   useEffect(() => {

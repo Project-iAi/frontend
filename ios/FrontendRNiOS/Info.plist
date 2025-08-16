@@ -60,7 +60,46 @@
 <array>
   <integer>1</integer>
 </array>
-<key>UIRequiresFullScreen</key>
-<true/>
+	<key>UIRequiresFullScreen</key>
+	<true/>
+	
+	<!-- 카카오 로그인 설정 -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>kakaolink</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>kakao384e2f5368aa1c6eda13e48d33e1cd56</string>
+			</array>
+		</dict>
+	</array>
+	
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>kakaokompassauth</string>
+		<string>kakaolink</string>
+	</array>
+	
+	<!-- 카카오 SDK 설정 -->
+	<key>KakaoAppKey</key>
+	<string>384e2f5368aa1c6eda13e48d33e1cd56</string>
+	
+	<key>KakaoCustomScheme</key>
+	<string>kakao384e2f5368aa1c6eda13e48d33e1cd56</string>
+	
+	<!-- 추가 카카오 키들 (SDK 호환성) -->
+	<key>kakao_app_key</key>
+	<string>384e2f5368aa1c6eda13e48d33e1cd56</string>
+	
+	<key>kakao_custom_scheme</key>
+	<string>kakao384e2f5368aa1c6eda13e48d33e1cd56</string>
+	
+	<key>KAKAO_APP_KEY</key>
+	<string>384e2f5368aa1c6eda13e48d33e1cd56</string>
+	
+	<key>KAKAO_CUSTOM_SCHEME</key>
+	<string>kakao384e2f5368aa1c6eda13e48d33e1cd56</string>
 </dict>
 </plist>

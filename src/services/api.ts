@@ -62,6 +62,34 @@ export interface ApiCharacter {
   persona: string;
 }
 
+// 카카오 로그인 및 회원가입 관련 타입
+export interface KakaoLoginRequest {
+  accessToken: string;
+}
+
+export interface KakaoLoginResponse {
+  accessToken: string;
+  profileCompleted: boolean;
+}
+
+export interface SignupRequest {
+  childName: string;
+  childGender: string;
+  childAge: number;
+  motherName: string;
+  childInterests: string[];
+}
+
+export interface SignupResponse {
+  success: boolean;
+  message?: string;
+}
+
+export interface MeResponse {
+  // JWT payload 내용에 따라 정의
+  [key: string]: any;
+}
+
 export interface CreateChatRoomRequest {
   characterId: number;
   emotion: string;
@@ -288,6 +316,87 @@ export const apiService = {
     }
     
     return response.json();
+  },
+
+  // 카카오 네이티브 로그인
+  kakaoLogin: async (accessToken: string): Promise<KakaoLoginResponse> => {
+    try {
+      console.log('🔐 카카오 로그인 요청:', accessToken);
+      const response = await fetch(`${API_BASE_URL}/auth/kakao/native`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ accessToken }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ 카카오 로그인 API 오류:', errorText);
+        throw new Error(`카카오 로그인 실패: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ 카카오 로그인 성공:', result);
+      return result;
+    } catch (error) {
+      console.error('💥 카카오 로그인 API 오류:', error);
+      throw error;
+    }
+  },
+
+  // 회원가입
+  signup: async (signupData: SignupRequest, jwtToken: string): Promise<SignupResponse> => {
+    try {
+      console.log('📝 회원가입 요청:', signupData);
+      const response = await fetch(`${API_BASE_URL}/auth/sign-up`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwtToken}`,
+        },
+        body: JSON.stringify(signupData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ 회원가입 API 오류:', errorText);
+        throw new Error(`회원가입 실패: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ 회원가입 성공:', result);
+      return result;
+    } catch (error) {
+      console.error('💥 회원가입 API 오류:', error);
+      throw error;
+    }
+  },
+
+  // 내 정보 조회
+  getMe: async (jwtToken: string): Promise<MeResponse> => {
+    try {
+      console.log('👤 내 정보 조회 요청');
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ 내 정보 조회 API 오류:', errorText);
+        throw new Error(`내 정보 조회 실패: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ 내 정보 조회 성공:', result);
+      return result;
+    } catch (error) {
+      console.error('💥 내 정보 조회 API 오류:', error);
+      throw error;
+    }
   },
 };
 

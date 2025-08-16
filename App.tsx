@@ -9,6 +9,7 @@ import React from 'react';
 import { LogBox, Platform, useWindowDimensions, View } from 'react-native';
 import { useAppStore } from './src/store/useAppStore';
 import OnboardingScreen from './src/components/OnboardingScreen';
+import KakaoLoginScreen from './src/components/KakaoLoginScreen';
 import SignupScreen from './src/components/SignupScreen';
 import ConceptScreen from './src/components/ConceptScreen';
 import CharacterScreen from './src/components/CharacterScreen';
@@ -27,8 +28,8 @@ LogBox.ignoreLogs([
   'AsyncStorage has been extracted',
 ]);
 
-const DESIGN_WIDTH = 375;   // iPhone 논리 폭(조절 가능)
-const DESIGN_HEIGHT = 820; // 세로 길이(조절 가능)
+const DESIGN_WIDTH = 410;   // iPhone 논리 폭(조절 가능)
+const DESIGN_HEIGHT = 900;
 const SCREEN_SCALE = 1;   // iPad 화면 대비 프레임 가로/세로 90% 사용 (조절 가능)
 
 const PhoneFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -71,6 +72,8 @@ const App = () => {
     switch (currentStep) {
       case 'onboarding':
         return <OnboardingScreen />;
+      case 'kakaoLogin':
+        return <KakaoLoginScreen />;
       case 'signup':
         return <SignupScreen />;
       case 'concept':
