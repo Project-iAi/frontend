@@ -28,7 +28,7 @@ LogBox.ignoreLogs([
 ]);
 
 const DESIGN_WIDTH = 375;   // iPhone 논리 폭(조절 가능)
-const DESIGN_HEIGHT = 770; // 세로 길이(조절 가능)
+const DESIGN_HEIGHT = 820; // 세로 길이(조절 가능)
 const SCREEN_SCALE = 1;   // iPad 화면 대비 프레임 가로/세로 90% 사용 (조절 가능)
 
 const PhoneFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -38,18 +38,26 @@ const PhoneFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     (width * SCREEN_SCALE) / DESIGN_WIDTH,
     (height * SCREEN_SCALE) / DESIGN_HEIGHT,
   );
+  
+  const containerStyle = {
+    flex: 1,
+    backgroundColor: '#000',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  };
+  
+  const frameStyle = {
+    width: DESIGN_WIDTH,
+    height: DESIGN_HEIGHT,
+    transform: [{ scale }],
+    overflow: 'hidden' as const,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+  };
+  
   return (
-    <View style={{ flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }}>
-      <View
-        style={{
-          width: DESIGN_WIDTH,
-          height: DESIGN_HEIGHT,
-          transform: [{ scale }],
-          overflow: 'hidden',
-          borderRadius: 20,
-          backgroundColor: '#fff',
-        }}
-      >
+    <View style={containerStyle}>
+      <View style={frameStyle}>
         {children}
       </View>
     </View>

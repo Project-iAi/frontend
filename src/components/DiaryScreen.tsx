@@ -330,13 +330,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333333',
   },
-  dateRow: {
-    marginBottom: SIZES.lg,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-  },
+
   dateText: {
     fontSize: 18,
     fontWeight: '600',
