@@ -50,6 +50,7 @@ const CollectionScreen = () => {
     setSelectedCharacter,
     setSelectedConcept,
     setSelectedEmotion,
+    conversations,
   } = useAppStore();
   const [currentMonth, _setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -427,34 +428,80 @@ const CollectionScreen = () => {
     'bear': { name: '고미삐', concept: 'farm' as ConceptType },
   };
 
+  // characterId -> 이름/컨셉 매핑 (대화 다시보기 시 동일 이미지/배경 유지)
+  const mapCharacterMeta = (characterId: string): { name: string; concept: ConceptType } => {
+    switch (characterId) {
+      case 'ham_1':
+        return { name: '햄삐', concept: 'space' };
+      case 'fox_1':
+        return { name: '여삐', concept: 'space' };
+      case 'lion_1':
+        return { name: '사삐', concept: 'space' };
+      case 'chick_1':
+        return { name: '아리삐', concept: 'school' };
+      case 'dog_1':
+        return { name: '멍삐', concept: 'school' };
+      case 'cat_1':
+        return { name: '냥삐', concept: 'school' };
+      case 'rabbit_1':
+        return { name: '래삐', concept: 'farm' };
+      case 'rac_1':
+        return { name: '구리삐', concept: 'farm' };
+      case 'bear_1':
+        return { name: '고미삐', concept: 'farm' };
+      default:
+        return { name: '햄삐', concept: 'space' };
+    }
+  };
+
   // 대화 보기 핸들러 (백엔드 데이터 지원)
   const handleViewConversation = async (entry: any) => {
     if ('roomId' in entry) {
       // 백엔드 데이터인 경우 - 실제 채팅 메시지를 불러와서 바로 채팅 UI로 이동
       try {
         console.log('💬 채팅 내역 불러오기 시작, roomId:', entry.roomId);
-        
-        // 캐릭터 정보 설정 (ChatHistoryScreen용)
-        const mockCharacter = {
-          id: 'ham_1',
-          name: '햄삐',
-          concept: 'space' as ConceptType,
-          description: '햄삐와의 추억',
-        };
-        
-        setSelectedCharacter(mockCharacter);
-        setSelectedConcept(mockCharacter.concept);
-        setSelectedEmotion('happy');
-        
-        // 채팅 기록 화면용 대화 정보 설정 (메시지는 ChatHistoryScreen에서 직접 로드)
-        setCurrentConversation({
-          id: entry.id.toString(),
-          characterId: mockCharacter.id,
-          emotion: 'happy',
-          messages: [], // ChatHistoryScreen에서 직접 로드
-          createdAt: new Date(entry.createdAt),
-          roomId: entry.roomId,
-        });
+
+        // 저장된 대화에서 해당 roomId의 메타 복원
+        const matched = conversations.find(c => c.roomId === entry.roomId);
+        if (matched) {
+          const meta = mapCharacterMeta(matched.characterId);
+          const character: Character = {
+            id: matched.characterId,
+            name: meta.name,
+            concept: meta.concept,
+            description: `${meta.name}와의 대화`,
+          };
+
+          setSelectedCharacter(character);
+          setSelectedConcept(meta.concept);
+          setSelectedEmotion(matched.emotion);
+
+          // 화면용 대화 정보 설정 (메시지는 ChatHistoryScreen에서 직접 로드)
+          setCurrentConversation({
+            ...matched,
+            messages: [],
+          });
+        } else {
+          // 매칭되는 로컬 대화가 없을 때 안전한 기본값 (앱 재시작 등)
+          const fallback = mapCharacterMeta('ham_1');
+          const character: Character = {
+            id: 'ham_1',
+            name: fallback.name,
+            concept: fallback.concept,
+            description: `${fallback.name}와의 대화`,
+          };
+          setSelectedCharacter(character);
+          setSelectedConcept(character.concept);
+          setSelectedEmotion('happy');
+          setCurrentConversation({
+            id: String(entry.roomId),
+            characterId: character.id,
+            emotion: 'happy',
+            messages: [],
+            createdAt: new Date(entry.createdAt),
+            roomId: entry.roomId,
+          });
+        }
         
         setShowModal(false);
         setCurrentStep('chatHistory'); // 채팅 기록 전용 UI로 이동

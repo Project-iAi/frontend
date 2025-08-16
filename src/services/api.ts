@@ -42,7 +42,7 @@ const getBaseURL = () => {
     return `http://${host}:3000`;
   }
 
-  // iOS: 시뮬레이터는 localhost, 실기기는 Metro 호스트 IP 사용
+  // iOS: 시뮬레이터는 localhost, 실기는 Metro 호스트 IP 사용
   if (host === 'localhost' || host === '127.0.0.1') {
     // 실기기에서 localhost로 잡히면 맥 IP로 강제 교체
     return `http://${DEV_FALLBACK_HOST}:3000`;
@@ -53,7 +53,30 @@ const getBaseURL = () => {
 export const API_BASE_URL = getBaseURL();
 export const SOCKET_URL = API_BASE_URL;
 
-// 타입 정의
+// 새로운 타입 정의
+export interface ApiCharacter {
+  id: number;
+  name: string;
+  category: string;
+  description: string;
+  persona: string;
+}
+
+export interface CreateChatRoomRequest {
+  characterId: number;
+  emotion: string;
+}
+
+export interface CreateChatRoomResponse {
+  id: number;
+  createdAt: string;
+}
+
+export interface SelectCharacterRequest {
+  characterId: number;
+}
+
+// 기존 타입 정의
 export interface ChatRoom {
   id: number;
   createdAt: Date;
@@ -92,16 +115,57 @@ export interface ProcessingStatus {
 
 // REST API 함수들
 export const apiService = {
-  // 채팅방 생성
-  createChatRoom: async (): Promise<ChatRoom> => {
-    console.log('🚀 API 호출 시작:', `${API_BASE_URL}/chat/room`);
+  // 캐릭터 목록 조회
+  getCharacters: async (): Promise<ApiCharacter[]> => {
+    console.log('🚀 캐릭터 조회 시작:', `${API_BASE_URL}/characters`);
     
     try {
+      const response = await fetch(`${API_BASE_URL}/characters`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('📡 응답 상태:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API 오류 응답:', errorText);
+        throw new Error(`캐릭터 조회 실패: ${response.status} ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ 캐릭터 조회 성공:', result);
+      return result;
+      
+    } catch (error) {
+      console.error('💥 캐릭터 조회 API 오류:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('Network request failed') || error.message.includes('fetch')) {
+          throw new Error('서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.');
+        }
+      }
+      throw error;
+    }
+  },
+
+  // 채팅방 생성 (감정과 캐릭터 ID 포함)
+  createChatRoom: async (characterId: number, emotion: string): Promise<CreateChatRoomResponse> => {
+    console.log('🚀 채팅방 생성 시작:', `${API_BASE_URL}/chat/room`, { characterId, emotion });
+    
+    try {
+      const requestBody: CreateChatRoomRequest = {
+        characterId,
+        emotion,
+      };
+      
       const response = await fetch(`${API_BASE_URL}/chat/room`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify(requestBody),
       });
       
       console.log('📡 응답 상태:', response.status, response.statusText);
@@ -118,6 +182,44 @@ export const apiService = {
       
     } catch (error) {
       console.error('💥 채팅방 생성 API 오류:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('Network request failed') || error.message.includes('fetch')) {
+          throw new Error('서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.');
+        }
+      }
+      throw error;
+    }
+  },
+
+  // 채팅방에 캐릭터 선택
+  selectCharacter: async (roomId: number, characterId: number): Promise<void> => {
+    console.log('🚀 캐릭터 선택 시작:', `${API_BASE_URL}/chat/room/${roomId}/character`, { characterId });
+    
+    try {
+      const requestBody: SelectCharacterRequest = {
+        characterId,
+      };
+      
+      const response = await fetch(`${API_BASE_URL}/chat/room/${roomId}/character`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+      
+      console.log('📡 응답 상태:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API 오류 응답:', errorText);
+        throw new Error(`캐릭터 선택 실패: ${response.status} ${response.statusText}`);
+      }
+      
+      console.log('✅ 캐릭터 선택 성공');
+      
+    } catch (error) {
+      console.error('💥 캐릭터 선택 API 오류:', error);
       if (error instanceof Error) {
         if (error.message.includes('Network request failed') || error.message.includes('fetch')) {
           throw new Error('서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.');
