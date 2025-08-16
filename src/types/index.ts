@@ -76,7 +76,7 @@ export interface DiaryEntry {
 
 // 앱 상태 관련 타입
 export interface AppState {
-  currentStep: 'onboarding' | 'signup' | 'concept' | 'character' | 'emotion' | 'conversation' | 'diary' | 'collection' | 'diaryDetail' | 'chatHistory';
+  currentStep: 'onboarding' | 'signup' | 'concept' | 'character' | 'emotion' | 'conversation' | 'diary' | 'collection' | 'diaryDetail' | 'chatHistory' | 'report';
   user: User | null;
   selectedConcept: ConceptType | null;
   selectedCharacter: Character | null;
@@ -85,4 +85,5 @@ export interface AppState {
   conversations: Conversation[];
   diaryEntries: DiaryEntry[];
   currentDiary: DiaryEntry | null; // 현재 보고 있는 일기
+  selectedReportDate: Date | null; // 선택된 리포트 날짜
 } 

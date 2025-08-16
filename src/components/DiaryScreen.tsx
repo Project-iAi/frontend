@@ -14,26 +14,16 @@ import { useAppStore } from '../store/useAppStore';
 import { SIZES } from '../utils/constants';
 import { images } from '../assets';
 import { apiService } from '../services/index';
+import { DiaryEntry } from '../types';
 
 const { height: screenHeight } = Dimensions.get('window');
 
 const DiaryScreen = () => {
-  const {
-    currentConversation,
-    selectedCharacter,
-    user,
-    setCurrentStep,
-    currentDiary,
-    setCurrentDiary,
-  } = useAppStore();
-
-  const [isGenerating, setIsGenerating] = useState(true);
-  const [diaryContent, setDiaryContent] = useState('');
-  const [textLinesCount, setTextLinesCount] = useState(0);
-  const LINE_HEIGHT = 32; // styles.diaryContent.lineHeight와 동일하게 유지 (행간 확대)
-  const UNDERLINE_OFFSET = 4; // 글과 밑줄 사이 간격
+  const { currentConversation, selectedCharacter, user, setCurrentStep, currentDiary, setCurrentDiary } = useAppStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(true);
+  const [textLinesCount, setTextLinesCount] = useState(0);
 
   const handleBack = () => {
     setCurrentStep('collection');
@@ -47,47 +37,39 @@ const DiaryScreen = () => {
     setCurrentStep('concept');
   };
 
-  // 사용하지 않는 유틸 제거됨
-
-  // 감정 한글/이모지 매핑
-  const emotionToKorean = (emotion?: string) => {
-    if (!emotion) return undefined;
-    const map: Record<string, string> = { happy: '기쁨', sad: '슬픔', angry: '화남' };
-    return map[emotion] || undefined;
-  };
+  // 감정 이모지 매핑
   const emotionToEmoji = (emotion?: string) => {
     if (!emotion) return undefined;
     const map: Record<string, string> = { happy: '😊', sad: '😢', angry: '😠' };
     return map[emotion] || undefined;
   };
 
-  const formatDiaryDateTimeKST = () => {
-    const base = currentDiary?.createdAt ? new Date(currentDiary.createdAt) : new Date();
-    // 날짜
-    const ymd = new Intl.DateTimeFormat('ko-KR', {
+  const getCurrentDate = () => {
+    const now = new Date();
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
       timeZone: 'Asia/Seoul',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(base);
-    // 시간 (오전/오후 hh:mm)
-    const hm = new Intl.DateTimeFormat('ko-KR', {
-      timeZone: 'Asia/Seoul',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    }).format(base);
-    // ymd는 2025. 08. 15 형태 → 년/월/일로 치환
-    const [year, month, day] = ymd.replace(/\s/g, '').split('.').filter(Boolean);
-    const dateText = `${year}년 ${Number(month)}월 ${Number(day)}일`;
-    return `${dateText} ${hm}`;
+    };
+    return new Intl.DateTimeFormat('ko-KR', options).format(now);
+  };
+
+  const formatDiaryDate = (dateInput: Date) => {
+    const d = new Date(dateInput);
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      timeZone: 'Asia/Seoul', // KST
+    };
+    return new Intl.DateTimeFormat('ko-KR', options).format(d);
   };
 
   useEffect(() => {
     const fetchDiary = async () => {
       // currentDiary가 있으면 그것을 사용 (일기 생성 직후)
       if (currentDiary) {
-        setDiaryContent(currentDiary.content);
         setIsGenerating(false);
         return;
       }
@@ -102,12 +84,10 @@ const DiaryScreen = () => {
           const diary = await apiService.getDiary(currentConversation.roomId);
           console.log('일기 조회 완료:', diary);
           
-          setDiaryContent(diary.content);
-          // 스토어 타입(DiaryEntry)에 맞게 createdAt을 문자열로 변환
           setCurrentDiary({
             ...diary,
             createdAt: new Date(diary.createdAt),
-          } as any);
+          } as DiaryEntry);
           setIsGenerating(false);
           
         } catch (diaryError) {
@@ -218,18 +198,18 @@ const DiaryScreen = () => {
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.diaryCard}>
-            {/* 제목만 표시 (오늘의 기분은 날짜 옆에서만) */}
-            <View style={styles.titleContainer}>
-              <Text style={styles.titleText}>{`${selectedCharacter?.name ?? '캐릭터'}와의 대화`}</Text>
-            </View>
-            {/* 날짜 + 오늘의 기분 */}
-            <View style={styles.dateRow}>
-              <Text style={styles.dateText}>{formatDiaryDateTimeKST()}</Text>
-              {currentConversation?.emotion && (
-                <Text style={styles.moodText}>
-                  오늘의 기분: {emotionToKorean(currentConversation.emotion)}{emotionToEmoji(currentConversation.emotion) ? ` ${emotionToEmoji(currentConversation.emotion)}` : ''}
+            <View style={styles.dateContainer}>
+              <View style={styles.dateRow}>
+                <Text style={styles.dateText}>
+                  {currentDiary ? formatDiaryDate(currentDiary.createdAt) : getCurrentDate()}
                 </Text>
-              )}
+                {/* 오늘의 기분 - 이모지만 표시 */}
+                {currentConversation?.emotion && (
+                  <Text style={styles.moodEmoji}>
+                    {emotionToEmoji(currentConversation.emotion)}
+                  </Text>
+                )}
+              </View>
             </View>
 
             <View style={styles.illustrationContainer}>
@@ -249,24 +229,29 @@ const DiaryScreen = () => {
             </View>
 
             <View style={styles.contentContainer}>
-              <View style={styles.notebookLines}>
-                <View pointerEvents="none" style={styles.linesOverlay}>
-                  {Array.from({ length: Math.max(textLinesCount, 1) }).map((_, idx) => (
-                    <View key={idx} style={[styles.noteLine, { top: (idx + 1) * LINE_HEIGHT + UNDERLINE_OFFSET }]} />
-                  ))}
-                </View>
+              {/* 일기 내용 */}
+              <View style={styles.diaryContent}>
                 <Text 
-                  style={styles.diaryContent}
+                  style={styles.diaryText}
                   onLayout={(e) => {
                     const h = e.nativeEvent.layout.height;
-                    const lines = Math.ceil(h / LINE_HEIGHT);
+                    const lines = Math.ceil(h / 32);
                     if (lines !== textLinesCount) {
                       setTextLinesCount(lines);
                     }
                   }}
                 >
-                  {diaryContent}
+                  {currentDiary?.content || '일기 내용을 불러오는 중...'}
                 </Text>
+              </View>
+              
+              {/* 노트 라인들 - 일기 텍스트와 정확히 맞춤 */}
+              <View style={styles.notebookLines}>
+                <View pointerEvents="none" style={styles.linesOverlay}>
+                  {Array.from({ length: Math.max(textLinesCount, 1) }).map((_, idx) => (
+                    <View key={idx} style={[styles.noteLine, { top: (idx + 1) * 32 }]} />
+                  ))}
+                </View>
               </View>
             </View>
           </View>
@@ -337,11 +322,12 @@ const styles = StyleSheet.create({
     minHeight: screenHeight * 0.7,
   },
   titleContainer: {
-    marginBottom: SIZES.xs,
+    marginBottom: SIZES.lg,
+    alignItems: 'center',
   },
   titleText: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: 'bold',
     color: '#333333',
   },
   dateRow: {
@@ -349,6 +335,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    width: '100%',
   },
   dateText: {
     fontSize: 18,
@@ -404,51 +391,48 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   contentContainer: {
-    flex: 1,
     backgroundColor: '#FFF5F5',
     borderRadius: 15,
     padding: SIZES.lg,
     marginBottom: SIZES.lg,
     minHeight: 200,
+    position: 'relative',
+    overflow: 'hidden', // 내용이 넘치지 않도록
   },
   notebookLines: {
-    flex: 1,
-    backgroundColor: '#FFF5F5',
-    borderRadius: 15,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  linesOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 0,
+    pointerEvents: 'none',
+    padding: SIZES.lg, // contentContainer와 동일한 패딩
+  },
+  linesOverlay: {
+    position: 'relative',
+    height: '100%',
   },
   noteLine: {
     position: 'absolute',
-    height: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    width: '100%',
-  },
-  lineContainer: {
-    paddingVertical: 0,
-    paddingHorizontal: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: '#E0E0E0', // 회색 라인
   },
   diaryContent: {
-    fontSize: 16,
-    lineHeight: 32,
-    color: '#333333',
-    textAlign: 'left',
-    flexWrap: 'wrap',
-    width: '100%',
+    position: 'relative',
     zIndex: 1,
-    backgroundColor: 'transparent',
+    paddingBottom: SIZES.md, // 하단 여백 추가
+  },
+  diaryText: {
+    fontSize: 16,
+    lineHeight: 32, // LINE_HEIGHT와 정확히 일치
+    color: '#333333',
     fontFamily: 'Epilogue',
     fontWeight: '600',
     letterSpacing: 0.4,
+    position: 'relative',
+    zIndex: 2, // 라인 위에 표시
   },
   errorContainer: {
     flex: 1,
@@ -555,6 +539,19 @@ const styles = StyleSheet.create({
     color: '#333333',
     fontSize: 16,
     fontWeight: '600',
+  },
+  dateContainer: {
+    marginBottom: SIZES.md,
+    alignItems: 'center',
+  },
+  dateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
+  moodEmoji: {
+    fontSize: 18, // 날짜와 같은 크기
   },
 });
 

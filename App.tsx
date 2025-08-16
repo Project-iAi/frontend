@@ -17,6 +17,7 @@ import DiaryScreen from './src/components/DiaryScreen';
 import CollectionScreen from './src/components/CollectionScreen';
 import DiaryDetailScreen from './src/components/DiaryDetailScreen';
 import ChatHistoryScreen from './src/components/ChatHistoryScreen';
+import ReportScreen from './src/components/ReportScreen';
 
 // 경고 메시지 숨기기
 LogBox.ignoreLogs([
@@ -26,8 +27,8 @@ LogBox.ignoreLogs([
   'AsyncStorage has been extracted',
 ]);
 
-const DESIGN_WIDTH = 430;   // iPhone 논리 폭(조절 가능)
-const DESIGN_HEIGHT = 800; // 세로 길이(조절 가능)
+const DESIGN_WIDTH = 375;   // iPhone 논리 폭(조절 가능)
+const DESIGN_HEIGHT = 770; // 세로 길이(조절 가능)
 const SCREEN_SCALE = 1;   // iPad 화면 대비 프레임 가로/세로 90% 사용 (조절 가능)
 
 const PhoneFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -78,6 +79,8 @@ const App = () => {
         return <DiaryDetailScreen />;
       case 'chatHistory':
         return <ChatHistoryScreen />;
+      case 'report':
+        return <ReportScreen />;
       default:
         return <OnboardingScreen />;
     }

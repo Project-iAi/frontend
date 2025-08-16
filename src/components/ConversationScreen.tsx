@@ -554,7 +554,7 @@ const ConversationScreen = () => {
         />
 
         {/* 채팅 창 */}
-        <View style={[styles.chatContainer, { height: layoutHeight * 0.65 }]}>
+        <View style={[styles.chatContainer, { height: layoutHeight * 0.7 }]}>
           {/* 연결 상태 표시 - 채팅창 상단 */}
           <View style={styles.statusContainer}>
             <Text style={styles.statusText}>

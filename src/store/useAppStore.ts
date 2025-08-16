@@ -24,6 +24,9 @@ interface AppStore extends AppState {
   addDiaryEntry: (entry: DiaryEntry) => void;
   setCurrentDiary: (diary: DiaryEntry | null) => void;
   
+  // 리포트 관리
+  setSelectedReportDate: (date: Date | null) => void;
+  
   // 리셋
   resetApp: () => void;
 }
@@ -38,6 +41,7 @@ const initialState: AppState = {
   conversations: [],
   diaryEntries: [],
   currentDiary: null,
+  selectedReportDate: null,
 };
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -101,6 +105,10 @@ export const useAppStore = create<AppStore>((set) => ({
 
   setCurrentDiary: (diary) => {
     set({ currentDiary: diary });
+  },
+
+  setSelectedReportDate: (date) => {
+    set({ selectedReportDate: date });
   },
 
   resetApp: () => {
