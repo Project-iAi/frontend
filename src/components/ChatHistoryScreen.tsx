@@ -9,6 +9,7 @@ import {
   ImageBackground,
   Image,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { SIZES } from '../utils/constants';
@@ -205,8 +206,9 @@ const ChatHistoryScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: screenWidth,
+    width: Platform.OS === 'ios' ? screenWidth * 1.1 : screenWidth, // iOS에서 가로 10% 확장
     height: screenHeight,
+    // 전체 화면 활용 (공백 없음)
   },
   safeArea: {
     flex: 1,
@@ -272,7 +274,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: screenHeight * 0.65,
+    height: screenHeight * 0.8, // 0.7 → 0.8로 세로 길이 더 증가
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,

@@ -523,6 +523,8 @@ const ConversationScreen = () => {
       resizeMode="cover"
       onLayout={(e) => {
         const { width, height } = e.nativeEvent.layout;
+        console.log('📱 iOS 화면 크기:', Platform.OS, 'width:', width, 'height:', height);
+        console.log('📱 screenHeight:', screenHeight, '계산된 높이:', height * 0.75);
         setContainerLayout({ width, height });
       }}
     >
@@ -549,7 +551,12 @@ const ConversationScreen = () => {
         />
 
         {/* 채팅 창 */}
-        <View style={[styles.chatContainer, { height: layoutHeight * 0.68 }]}>
+        <View style={[
+          styles.chatContainer, 
+          Platform.OS === 'ios' 
+            ? { height: layoutHeight * 0.85 } // iOS에서 더 길게
+            : { height: layoutHeight * 0.68 } // Android는 기존 크기
+        ]}>
           {/* 연결 상태 표시 - 채팅창 상단 */}
           <View style={styles.statusContainer}>
             <Text style={styles.statusText}>
@@ -705,8 +712,9 @@ const ConversationScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: screenWidth,
+    width: Platform.OS === 'ios' ? screenWidth * 1.1 : screenWidth, // iOS에서 가로 10% 확장
     height: screenHeight,
+    // 전체 화면 활용 (공백 없음)
   },
   safeArea: {
     flex: 1,
@@ -737,10 +745,10 @@ const styles = StyleSheet.create({
   },
   chatContainer: {
     position: 'absolute',
-    bottom: -10, // 10px 아래로 이동
+    bottom: Platform.OS === 'ios' ? -20 : -10, // iOS에서 더 아래로
     left: 0,
     right: 0,
-    height: screenHeight * 0.65,
+    height: Platform.OS === 'ios' ? screenHeight * 0.85 : screenHeight * 0.75, // iOS에서 더 길게
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
