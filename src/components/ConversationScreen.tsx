@@ -380,18 +380,10 @@ const ConversationScreen = () => {
           }
           
           const newMessages = [...prev, message];
-          
-          // 음성 메시지 처리 (실패 시 fallback)
           if (message.sender === 'ai' && message.type === 'voice' && message.audioData) {
             console.log('AI 음성 메시지 수신, 자동 재생 시작');
-            try {
-              playAudioFromBase64(message.audioData);
-            } catch (audioError) {
-              console.warn('음성 재생 실패, 텍스트로 계속:', audioError);
-              // 음성 재생 실패해도 텍스트는 정상 표시
-            }
+            playAudioFromBase64(message.audioData);
           }
-          
           return newMessages;
         });
         
@@ -417,17 +409,7 @@ const ConversationScreen = () => {
       // 오류 처리
       socket.on('error', (error: any) => {
         console.error('Socket 오류:', error);
-        
-        // 음성 합성 오류인지 확인
-        if (error?.error === '음성 합성에 실패했습니다.') {
-          Alert.alert(
-            '음성 처리 오류', 
-            '음성 메시지 처리 중 문제가 발생했습니다. 텍스트로 계속 대화할 수 있습니다.',
-            [{ text: '확인', style: 'default' }]
-          );
-        } else {
-          Alert.alert('오류', '서버 연결에 문제가 발생했습니다.');
-        }
+        Alert.alert('오류', '서버 연결에 문제가 발생했습니다.');
       });
 
       return () => {
@@ -887,13 +869,16 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: SIZES.xl,
     alignItems: 'center',
-    width: '70%',
+    width: '80%', // 너비 증가
+    maxWidth: 350, // 최대 너비 제한
   },
   quizOptionButton: {
     backgroundColor: '#FFB6C1',
-    paddingHorizontal: SIZES.md, // 가로 크기 줄임
+    paddingHorizontal: SIZES.xs, // 가로 크기 더 줄임
     paddingVertical: SIZES.sm,
     borderRadius: 12,
+    minWidth: 50, // 최소 너비 설정
+    maxWidth: 60, // 최대 너비 제한
   },
   quizOptionText: {
     color: '#FFFFFF',
@@ -901,12 +886,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     minWidth: 40,
+    textAlignVertical: 'center', // Android용 세로 중앙 정렬
+    lineHeight: 18, // 텍스트 세로 중앙 정렬을 위한 lineHeight 설정
   },
   quizOptionsRow: {
     flexDirection: 'row',
     marginTop: SIZES.sm,
-    justifyContent: 'space-around', // 버튼들 사이 간격 균등 분배
+    justifyContent: 'center', // 중앙 정렬
+    alignItems: 'center',
     width: '100%',
+    gap: SIZES.sm, // 버튼 사이 간격 줄임
   },
   quizOptionButtonCustom: {
     paddingHorizontal: SIZES.md,
@@ -980,9 +969,9 @@ const styles = StyleSheet.create({
   },
   hatIcon: {
     position: 'absolute',
-    top: -8,
+    top: -12, // 위로 약간 올림
     left: '50%',
-    transform: [{ translateX: -12 }, { rotate: '-10deg' }],
+    transform: [{ translateX: -12 }, { rotate: '-10deg' }], // 왼쪽으로 약간 이동
     fontSize: 24,
   },
   backButton: {
@@ -1127,6 +1116,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: SIZES.sm,
   },
+
   micButtonRecording: {
     backgroundColor: '#FF3B30',
   },

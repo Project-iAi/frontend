@@ -10,13 +10,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
+import type { User } from '../types';
 import { SIZES } from '../utils/constants';
 import { images } from '../assets';
 import { apiService } from '../services';
 import { login as KakaoLogin } from '@react-native-seoul/kakao-login';
 
 const KakaoLoginScreen = () => {
-  const { setCurrentStep, setJwtToken, setProfileCompleted } = useAppStore();
+  const { setCurrentStep, setJwtToken, setProfileCompleted, setUser } = useAppStore();
   const [isLoading, setIsLoading] = React.useState(false);
 
   const handleBack = () => {
@@ -39,6 +40,23 @@ const KakaoLoginScreen = () => {
         // JWT 토큰과 프로필 완료 상태 저장
         setJwtToken(response.accessToken);
         setProfileCompleted(response.profileCompleted);
+        
+        // 사용자 정보 설정 (임시 사용자 객체)
+        const tempUser: User = {
+          child: {
+            id: 'temp_child_id',
+            name: '아이',
+            gender: 'none',
+            age: 5,
+            interests: []
+          },
+          parent: {
+            id: 'temp_parent_id',
+            name: '보호자',
+            relationship: '보호자'
+          }
+        };
+        setUser(tempUser);
         
         if (response.profileCompleted) {
           // 프로필이 완료된 경우 컨셉 선택 화면으로 이동

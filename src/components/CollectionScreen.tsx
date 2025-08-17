@@ -631,14 +631,8 @@ const CollectionScreen = () => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* 엄마 행스터 이미지 중앙 상단 - 임시로 숨김 */}
-          {/* <View style={styles.momContainer}>
-            <Image
-              source={(images.allCharacters as any).mom}
-              style={styles.momImage}
-              resizeMode="contain"
-            />
-          </View> */}
+          {/* 상단 패딩 추가 */}
+          <View style={styles.topPadding} />
 
           {/* 헤더 */}
           <View style={styles.header}>
@@ -829,17 +823,22 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flex: 1,
   },
+  topPadding: {
+    height: SIZES.md, // 상단 패딩 줄임
+  },
   scrollContent: {
     alignItems: 'center',
-    paddingTop: -SIZES.md, // 상단 여백 추가로 줄임
+    paddingTop: SIZES.sm, // 상단 여백 조정
     paddingBottom: SIZES.sm, // 최소 여백
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-evenly', // space-around에서 space-evenly로 변경하여 더 많은 공백
+    justifyContent: 'space-between', // 뒤로가기와 새로운 대화 버튼을 양쪽 끝으로
     alignItems: 'center',
-    padding: SIZES.md,
-    marginBottom: SIZES.sm,
+    padding: SIZES.lg, // 패딩 증가
+    marginBottom: SIZES.md, // 하단 여백 증가
+    width: '95%', // 너비 증가
+    paddingTop: SIZES.xl * 2, // 높이 올림
   },
   backButton: {
     backgroundColor: '#FFFFFF',

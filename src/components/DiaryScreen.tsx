@@ -19,7 +19,7 @@ import { DiaryEntry } from '../types';
 const { height: screenHeight } = Dimensions.get('window');
 
 const DiaryScreen = () => {
-  const { currentConversation, selectedCharacter, user, setCurrentStep, currentDiary, setCurrentDiary } = useAppStore();
+  const { currentConversation, selectedCharacter, user, setCurrentStep, currentDiary, setCurrentDiary, setSelectedReportDate } = useAppStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
@@ -35,6 +35,14 @@ const DiaryScreen = () => {
 
   const handleNewConversation = () => {
     setCurrentStep('concept');
+  };
+
+  const handleViewReport = () => {
+    if (currentConversation?.roomId && currentDiary) {
+      // 현재 일기의 날짜를 리포트 날짜로 설정
+      setSelectedReportDate(new Date(currentDiary.createdAt));
+      setCurrentStep('report');
+    }
   };
 
   // 감정 이모지 매핑
@@ -265,6 +273,9 @@ const DiaryScreen = () => {
             </TouchableOpacity>
             <TouchableOpacity style={styles.collectionButton} onPress={handleViewCollection}>
               <Text style={styles.collectionButtonText}>기록 보러가기</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.reportButton} onPress={handleViewReport}>
+              <Text style={styles.reportButtonText}>리포트</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -505,16 +516,16 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     marginTop: SIZES.lg,
+    gap: SIZES.sm, // 버튼 사이 간격
   },
   newButton: {
     backgroundColor: '#FFB6C1',
-    paddingHorizontal: SIZES.lg,
+    paddingHorizontal: SIZES.md,
     paddingVertical: SIZES.md,
     borderRadius: 25,
     flex: 1,
-    marginRight: SIZES.sm,
     alignItems: 'center',
   },
   newButtonText: {
@@ -524,15 +535,27 @@ const styles = StyleSheet.create({
   },
   collectionButton: {
     backgroundColor: '#FFFACD',
-    paddingHorizontal: SIZES.lg,
+    paddingHorizontal: SIZES.md,
     paddingVertical: SIZES.md,
     borderRadius: 25,
     flex: 1,
-    marginLeft: SIZES.sm,
     alignItems: 'center',
   },
   collectionButtonText: {
     color: '#333333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  reportButton: {
+    backgroundColor: '#87CEEB', // 하늘색
+    paddingHorizontal: SIZES.md,
+    paddingVertical: SIZES.md,
+    borderRadius: 25,
+    flex: 1,
+    alignItems: 'center',
+  },
+  reportButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
