@@ -19,9 +19,9 @@ import { apiService } from '../services';
 const SignupScreen = () => {
   const { setCurrentStep, setUser, jwtToken } = useAppStore();
   const [childName, setChildName] = useState('');
-  const [childGender, setChildGender] = useState<'남자' | '여자'>('남자');
+  const [childGender, setChildGender] = useState<'남자' | '여자' | '선택안함'>('선택안함');
   const [childAge, setChildAge] = useState('');
-  const [motherName, setMotherName] = useState('');
+  const [guardianName, setGuardianName] = useState('');
   const [interests, setInterests] = useState('');
   const [interestTags, setInterestTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,7 +30,7 @@ const SignupScreen = () => {
     setCurrentStep('onboarding');
   };
 
-  const handleGenderSelect = (gender: '남자' | '여자') => {
+  const handleGenderSelect = (gender: '남자' | '여자' | '선택안함') => {
     setChildGender(gender);
   };
 
@@ -60,7 +60,7 @@ const SignupScreen = () => {
   };
 
   const handleNext = async () => {
-    if (!childName || !childAge || !motherName) {
+    if (!childName || !childAge || !guardianName) {
       Alert.alert('알림', '필수 정보를 입력해주세요.');
       return;
     }
@@ -79,7 +79,7 @@ const SignupScreen = () => {
         childName,
         childGender,
         childAge: parseInt(childAge, 10),
-        motherName,
+        motherName: guardianName, // 보호자 이름으로 전송
         childInterests: interestTags,
       };
 
@@ -96,8 +96,8 @@ const SignupScreen = () => {
         },
         parent: {
           id: '1',
-          name: motherName,
-          relationship: '엄마',
+          name: guardianName,
+          relationship: '보호자',
         },
       };
 
@@ -180,6 +180,18 @@ const SignupScreen = () => {
                     childGender === '여자' && styles.genderButtonTextSelected
                   ]}>여자</Text>
                 </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[
+                    styles.genderButton, 
+                    childGender === '선택안함' && styles.genderButtonSelected
+                  ]} 
+                  onPress={() => handleGenderSelect('선택안함')}
+                >
+                  <Text style={[
+                    styles.genderButtonText,
+                    childGender === '선택안함' && styles.genderButtonTextSelected
+                  ]}>선택안함</Text>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -196,14 +208,14 @@ const SignupScreen = () => {
               />
             </View>
 
-            {/* 엄마 이름 */}
+            {/* 보호자 이름 */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>엄마 이름</Text>
+              <Text style={styles.label}>보호자 이름</Text>
               <TextInput
                 style={styles.input}
-                placeholder="엄마 이름을 입력해주세요"
-                value={motherName}
-                onChangeText={setMotherName}
+                placeholder="보호자 이름을 입력해주세요"
+                value={guardianName}
+                onChangeText={setGuardianName}
                 placeholderTextColor="#999"
                 autoComplete="off"
                 autoCorrect={false}

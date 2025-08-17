@@ -1,57 +1,13 @@
 // API 서비스 및 타입 정의
 import io, { Socket } from 'socket.io-client';
 
-import { Platform, NativeModules } from 'react-native';
-
 // 백엔드 URL 설정
-// - 안드로이드 에뮬레이터: 10.0.2.2 (호스트 컴퓨터의 localhost)
-// - iOS 시뮬레이터: localhost
-// - 실제 디바이스(안드/IOS): Metro 번들러의 호스트 IP를 추출하여 사용
+const PRODUCTION_URL = 'https://www.iailog.store';
+const DEV_URL = 'http://localhost:3000';
 
-const resolveDevHost = (): string => {
-  try {
-    // e.g. "http://192.168.0.5:8081/index.bundle?platform=android&dev=true&minify=false"
-    const scriptURL: string | undefined = (NativeModules as any)?.SourceCode?.scriptURL;
-    if (scriptURL) {
-      const match = scriptURL.match(/^[a-zA-Z]+:\/\/([^/:]+):\d+/);
-      if (match && match[1]) {
-        return match[1];
-      }
-    }
-  } catch (_) {}
-  return 'localhost';
-};
-
-// iOS 실기기에서 host가 localhost로 잡히는 경우를 대비한 핫픽스용 IP (맥의 로컬 IP)
-// 필요 시 변경하세요.
-const DEV_FALLBACK_HOST = '192.168.45.118';
-
-const getBaseURL = () => {
-  // Metro 번들러의 호스트를 최우선으로 사용하고,
-  // 'localhost'인 경우에는 각 플랫폼의 권장 루프백 대체를 사용
-  const host = resolveDevHost();
-
-  if (Platform.OS === 'android') {
-    // Android
-    // host가 localhost로 나올 때: 실기기/에뮬레이터 구분 없이 우선 개발 PC IP를 사용하고,
-    // 마지막 수단으로 10.0.2.2(에뮬레이터 전용)를 사용
-    if (host === 'localhost' || host === '127.0.0.1') {
-      return `http://${DEV_FALLBACK_HOST}:3000`;
-    }
-    // Dev Settings에 IP를 넣어둔 경우 그대로 사용
-    return `http://${host}:3000`;
-  }
-
-  // iOS: 시뮬레이터는 localhost, 실기는 Metro 호스트 IP 사용
-  if (host === 'localhost' || host === '127.0.0.1') {
-    // 실기기에서 localhost로 잡히면 맥 IP로 강제 교체
-    return `http://${DEV_FALLBACK_HOST}:3000`;
-  }
-  return `http://${host}:3000`;
-};
-
-export const API_BASE_URL = getBaseURL();
-export const SOCKET_URL = API_BASE_URL;
+// 배포 환경으로 강제 설정 (테스트용)
+export const API_BASE_URL = PRODUCTION_URL;
+export const SOCKET_URL = PRODUCTION_URL;
 
 // 새로운 타입 정의
 export interface ApiCharacter {
@@ -450,19 +406,28 @@ export const apiService = {
 export const socketService = {
   // 소켓 연결
   connect: (): Socket => {
+    console.log('🔌 소켓 연결 시도:', SOCKET_URL);
+    
     const socket = io(SOCKET_URL, {
-      transports: ['websocket'], // React Native에서 권장
-      timeout: 20000,
+      transports: ['polling', 'websocket'], // polling을 우선으로 시도
+      timeout: 15000,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
     });
+    
     socket.on('connect_error', (error) => {
       console.error('🔌 소켓 연결 실패:', (error as any)?.message || String(error));
     });
+    
     socket.on('connect', () => {
       console.log('✅ 소켓 연결 성공');
     });
+    
+    socket.on('disconnect', (reason) => {
+      console.log('🔌 소켓 연결 해제:', reason);
+    });
+    
     return socket;
   },
 

@@ -380,10 +380,18 @@ const ConversationScreen = () => {
           }
           
           const newMessages = [...prev, message];
+          
+          // 음성 메시지 처리 (실패 시 fallback)
           if (message.sender === 'ai' && message.type === 'voice' && message.audioData) {
             console.log('AI 음성 메시지 수신, 자동 재생 시작');
-            playAudioFromBase64(message.audioData);
+            try {
+              playAudioFromBase64(message.audioData);
+            } catch (audioError) {
+              console.warn('음성 재생 실패, 텍스트로 계속:', audioError);
+              // 음성 재생 실패해도 텍스트는 정상 표시
+            }
           }
+          
           return newMessages;
         });
         
@@ -409,7 +417,17 @@ const ConversationScreen = () => {
       // 오류 처리
       socket.on('error', (error: any) => {
         console.error('Socket 오류:', error);
-        Alert.alert('오류', '서버 연결에 문제가 발생했습니다.');
+        
+        // 음성 합성 오류인지 확인
+        if (error?.error === '음성 합성에 실패했습니다.') {
+          Alert.alert(
+            '음성 처리 오류', 
+            '음성 메시지 처리 중 문제가 발생했습니다. 텍스트로 계속 대화할 수 있습니다.',
+            [{ text: '확인', style: 'default' }]
+          );
+        } else {
+          Alert.alert('오류', '서버 연결에 문제가 발생했습니다.');
+        }
       });
 
       return () => {
@@ -652,7 +670,7 @@ const ConversationScreen = () => {
                 style={styles.avatarImage}
                 resizeMode="contain"
               />
-              {quizCorrect && <Text style={[styles.hatIcon, { marginLeft: -10 }]}>🎩</Text>}
+              {quizCorrect && <Text style={[styles.hatIcon, { marginLeft: -3 }]}>🎩</Text>}
             </View>
             {!quizCorrect && (
               <>
