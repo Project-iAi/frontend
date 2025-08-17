@@ -19,7 +19,7 @@ const OnboardingScreen = () => {
   const { setCurrentStep } = useAppStore();
 
   const handleStart = () => {
-    setCurrentStep('signup');
+    setCurrentStep('kakaoLogin');
   };
 
   return (

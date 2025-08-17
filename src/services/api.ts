@@ -1,59 +1,86 @@
 // API 서비스 및 타입 정의
 import io, { Socket } from 'socket.io-client';
 
-import { Platform, NativeModules } from 'react-native';
-
 // 백엔드 URL 설정
-// - 안드로이드 에뮬레이터: 10.0.2.2 (호스트 컴퓨터의 localhost)
-// - iOS 시뮬레이터: localhost
-// - 실제 디바이스(안드/IOS): Metro 번들러의 호스트 IP를 추출하여 사용
+const PRODUCTION_URL = 'https://www.iailog.store';
+const DEV_URL = 'http://localhost:3000';
 
-const resolveDevHost = (): string => {
-  try {
-    // e.g. "http://192.168.0.5:8081/index.bundle?platform=android&dev=true&minify=false"
-    const scriptURL: string | undefined = (NativeModules as any)?.SourceCode?.scriptURL;
-    if (scriptURL) {
-      const match = scriptURL.match(/^[a-zA-Z]+:\/\/([^/:]+):\d+/);
-      if (match && match[1]) {
-        return match[1];
-      }
-    }
-  } catch (_) {}
-  return 'localhost';
-};
+// 배포 환경으로 강제 설정 (테스트용)
+export const API_BASE_URL = PRODUCTION_URL;
+export const SOCKET_URL = PRODUCTION_URL;
 
-// iOS 실기기에서 host가 localhost로 잡히는 경우를 대비한 핫픽스용 IP (맥의 로컬 IP)
-// 필요 시 변경하세요.
-const DEV_FALLBACK_HOST = '192.168.45.118';
+// 새로운 타입 정의
+export interface ApiCharacter {
+  id: number;
+  name: string;
+  category: string;
+  description: string;
+  persona: string;
+}
 
-const getBaseURL = () => {
-  // Metro 번들러의 호스트를 최우선으로 사용하고,
-  // 'localhost'인 경우에는 각 플랫폼의 권장 루프백 대체를 사용
-  const host = resolveDevHost();
+// 카카오 로그인 및 회원가입 관련 타입
+export interface KakaoLoginRequest {
+  accessToken: string;
+}
 
-  if (Platform.OS === 'android') {
-    // Android
-    // host가 localhost로 나올 때: 실기기/에뮬레이터 구분 없이 우선 개발 PC IP를 사용하고,
-    // 마지막 수단으로 10.0.2.2(에뮬레이터 전용)를 사용
-    if (host === 'localhost' || host === '127.0.0.1') {
-      return `http://${DEV_FALLBACK_HOST}:3000`;
-    }
-    // Dev Settings에 IP를 넣어둔 경우 그대로 사용
-    return `http://${host}:3000`;
-  }
+export interface KakaoLoginResponse {
+  accessToken: string;
+  profileCompleted: boolean;
+}
 
-  // iOS: 시뮬레이터는 localhost, 실기기는 Metro 호스트 IP 사용
-  if (host === 'localhost' || host === '127.0.0.1') {
-    // 실기기에서 localhost로 잡히면 맥 IP로 강제 교체
-    return `http://${DEV_FALLBACK_HOST}:3000`;
-  }
-  return `http://${host}:3000`;
-};
+export interface SignupRequest {
+  childName: string;
+  childGender: string;
+  childAge: number;
+  motherName: string;
+  childInterests: string[];
+}
 
-export const API_BASE_URL = getBaseURL();
-export const SOCKET_URL = API_BASE_URL;
+export interface SignupResponse {
+  success: boolean;
+  message?: string;
+}
 
-// 타입 정의
+export interface MeResponse {
+  // JWT payload 내용에 따라 정의
+  [key: string]: any;
+}
+
+// 부모 리포트 관련 타입
+export interface ParentReport {
+  emotionalState: string;
+  interests: string[];
+  languageDevelopment: string;
+  socialSkills: string;
+  highlights: string[];
+  suggestions: string[];
+  overallAssessment: string;
+  developmentScores: {
+    language: number;
+    social: number;
+    emotional: number;
+    creativity: number;
+    curiosity: number;
+  };
+  overallScore: number;
+  createdAt: string;
+}
+
+export interface CreateChatRoomRequest {
+  characterId: number;
+  emotion: string;
+}
+
+export interface CreateChatRoomResponse {
+  id: number;
+  createdAt: string;
+}
+
+export interface SelectCharacterRequest {
+  characterId: number;
+}
+
+// 기존 타입 정의
 export interface ChatRoom {
   id: number;
   createdAt: Date;
@@ -92,16 +119,57 @@ export interface ProcessingStatus {
 
 // REST API 함수들
 export const apiService = {
-  // 채팅방 생성
-  createChatRoom: async (): Promise<ChatRoom> => {
-    console.log('🚀 API 호출 시작:', `${API_BASE_URL}/chat/room`);
+  // 캐릭터 목록 조회
+  getCharacters: async (): Promise<ApiCharacter[]> => {
+    console.log('🚀 캐릭터 조회 시작:', `${API_BASE_URL}/characters`);
     
     try {
+      const response = await fetch(`${API_BASE_URL}/characters`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('📡 응답 상태:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API 오류 응답:', errorText);
+        throw new Error(`캐릭터 조회 실패: ${response.status} ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ 캐릭터 조회 성공:', result);
+      return result;
+      
+    } catch (error) {
+      console.error('💥 캐릭터 조회 API 오류:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('Network request failed') || error.message.includes('fetch')) {
+          throw new Error('서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.');
+        }
+      }
+      throw error;
+    }
+  },
+
+  // 채팅방 생성 (감정과 캐릭터 ID 포함)
+  createChatRoom: async (characterId: number, emotion: string): Promise<CreateChatRoomResponse> => {
+    console.log('🚀 채팅방 생성 시작:', `${API_BASE_URL}/chat/room`, { characterId, emotion });
+    
+    try {
+      const requestBody: CreateChatRoomRequest = {
+        characterId,
+        emotion,
+      };
+      
       const response = await fetch(`${API_BASE_URL}/chat/room`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify(requestBody),
       });
       
       console.log('📡 응답 상태:', response.status, response.statusText);
@@ -118,6 +186,44 @@ export const apiService = {
       
     } catch (error) {
       console.error('💥 채팅방 생성 API 오류:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('Network request failed') || error.message.includes('fetch')) {
+          throw new Error('서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.');
+        }
+      }
+      throw error;
+    }
+  },
+
+  // 채팅방에 캐릭터 선택
+  selectCharacter: async (roomId: number, characterId: number): Promise<void> => {
+    console.log('🚀 캐릭터 선택 시작:', `${API_BASE_URL}/chat/room/${roomId}/character`, { characterId });
+    
+    try {
+      const requestBody: SelectCharacterRequest = {
+        characterId,
+      };
+      
+      const response = await fetch(`${API_BASE_URL}/chat/room/${roomId}/character`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+      
+      console.log('📡 응답 상태:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API 오류 응답:', errorText);
+        throw new Error(`캐릭터 선택 실패: ${response.status} ${response.statusText}`);
+      }
+      
+      console.log('✅ 캐릭터 선택 성공');
+      
+    } catch (error) {
+      console.error('💥 캐릭터 선택 API 오류:', error);
       if (error instanceof Error) {
         if (error.message.includes('Network request failed') || error.message.includes('fetch')) {
           throw new Error('서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.');
@@ -187,25 +293,141 @@ export const apiService = {
     
     return response.json();
   },
+
+  // 카카오 네이티브 로그인
+  kakaoLogin: async (accessToken: string): Promise<KakaoLoginResponse> => {
+    try {
+      console.log('🔐 카카오 로그인 요청:', accessToken);
+      const response = await fetch(`${API_BASE_URL}/auth/kakao/native`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ accessToken }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ 카카오 로그인 API 오류:', errorText);
+        throw new Error(`카카오 로그인 실패: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ 카카오 로그인 성공:', result);
+      return result;
+    } catch (error) {
+      console.error('💥 카카오 로그인 API 오류:', error);
+      throw error;
+    }
+  },
+
+  // 회원가입
+  signup: async (signupData: SignupRequest, jwtToken: string): Promise<SignupResponse> => {
+    try {
+      console.log('📝 회원가입 요청:', signupData);
+      const response = await fetch(`${API_BASE_URL}/auth/sign-up`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwtToken}`,
+        },
+        body: JSON.stringify(signupData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ 회원가입 API 오류:', errorText);
+        throw new Error(`회원가입 실패: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ 회원가입 성공:', result);
+      return result;
+    } catch (error) {
+      console.error('💥 회원가입 API 오류:', error);
+      throw error;
+    }
+  },
+
+  // 내 정보 조회
+  getMe: async (jwtToken: string): Promise<MeResponse> => {
+    try {
+      console.log('👤 내 정보 조회 요청');
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ 내 정보 조회 API 오류:', errorText);
+        throw new Error(`내 정보 조회 실패: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ 내 정보 조회 성공:', result);
+      return result;
+    } catch (error) {
+      console.error('💥 내 정보 조회 API 오류:', error);
+      throw error;
+    }
+  },
+
+  // 부모 리포트 조회
+  getParentReport: async (roomId: number, jwtToken: string): Promise<ParentReport> => {
+    try {
+      console.log('📊 부모 리포트 조회 요청:', roomId);
+      const response = await fetch(`${API_BASE_URL}/diary/room/${roomId}/parent-report`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ 부모 리포트 조회 API 오류:', errorText);
+        throw new Error(`부모 리포트 조회 실패: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ 부모 리포트 조회 성공:', result);
+      return result;
+    } catch (error) {
+      console.error('💥 부모 리포트 조회 API 오류:', error);
+      throw error;
+    }
+  },
 };
 
 // Socket.IO 관련 함수들
 export const socketService = {
   // 소켓 연결
   connect: (): Socket => {
+    console.log('🔌 소켓 연결 시도:', SOCKET_URL);
+    
     const socket = io(SOCKET_URL, {
-      transports: ['websocket'], // React Native에서 권장
-      timeout: 20000,
+      transports: ['polling', 'websocket'], // polling을 우선으로 시도
+      timeout: 15000,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
     });
+    
     socket.on('connect_error', (error) => {
       console.error('🔌 소켓 연결 실패:', (error as any)?.message || String(error));
     });
+    
     socket.on('connect', () => {
       console.log('✅ 소켓 연결 성공');
     });
+    
+    socket.on('disconnect', (reason) => {
+      console.log('🔌 소켓 연결 해제:', reason);
+    });
+    
     return socket;
   },
 

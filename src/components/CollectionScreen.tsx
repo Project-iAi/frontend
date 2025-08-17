@@ -50,12 +50,17 @@ const CollectionScreen = () => {
     setSelectedCharacter,
     setSelectedConcept,
     setSelectedEmotion,
+    setSelectedReportDate,
+    conversations,
   } = useAppStore();
   const [currentMonth, _setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [backendDiaries, setBackendDiaries] = useState<DiaryEntry[]>([]);
   const [_isLoadingDiaries, setIsLoadingDiaries] = useState(false);
+
+
+
 
   const handleNewConversation = () => {
     setCurrentStep('concept');
@@ -75,10 +80,16 @@ const CollectionScreen = () => {
         console.log('✅ 모든 일기 불러오기 완료:', diaries);
         console.log('📊 일기 개수:', diaries.length);
         // 타입 변환: createdAt을 Date 객체로 변환하여 타입과 일치
-        const normalized = diaries.map((d: any) => ({
-          ...d,
-          createdAt: new Date(d.createdAt),
-        }));
+        // UTC 시간을 한국 시간(KST)으로 변환
+        const normalized = diaries.map((d: any) => {
+          const utcDate = new Date(d.createdAt);
+          // UTC 시간에 9시간(KST) 추가
+          const kstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000));
+          return {
+            ...d,
+            createdAt: kstDate,
+          };
+        });
         setBackendDiaries(normalized as DiaryEntry[]);
         
         // 각 일기의 날짜 로그
@@ -358,34 +369,38 @@ const CollectionScreen = () => {
     }
   };
 
-  // 캐릭터 이미지 가져오기
-  const getCharacterImage = (characterName: string) => {
-    const name = characterName.toLowerCase();
-    
-    // 정확한 캐릭터 이름 매칭
-    if (name.includes('햄삐') || name.includes('ham')) {
-      return images.allCharacters.ham?.normal || images.characters['space-1'];
-    } else if (name.includes('아리삐') || name.includes('chick')) {
-      return images.allCharacters.chick?.normal || images.characters['farm-3'];
-    } else if (name.includes('래삐') || name.includes('rabbit')) {
-      return images.allCharacters.rabbit?.normal || images.characters['farm-1'];
-    } else if (name.includes('멍삐') || name.includes('dog')) {
-      return images.allCharacters.dog?.normal || images.characters['school-3'];
-    } else if (name.includes('사삐') || name.includes('lion')) {
-      return images.allCharacters.lion?.normal || images.characters['school-1'];
-    } else if (name.includes('구리삐') || name.includes('rac')) {
-      return images.allCharacters.rac?.normal || images.characters['space-1'];
-    } else if (name.includes('냥삐') || name.includes('cat')) {
-      return images.allCharacters.cat?.normal || images.characters['space-3'];
-    } else if (name.includes('여삐') || name.includes('fox')) {
-      return images.allCharacters.fox?.normal || images.characters['space-2'];
-    } else if (name.includes('고미삐') || name.includes('bear')) {
-      return images.allCharacters.bear?.normal || images.characters['space-1'];
-    }
-    
-    // 기본 이미지
-    return images.characters['space-1'];
-  };
+  // 캐릭터 이미지 가져오기 (사용하지 않음 - 제거)
+  // const getCharacterImage = (characterName?: string) => {
+  //   if (!characterName) {
+  //     return images.allCharacters.ham?.normal;
+  //   }
+  //   
+  //   const name = characterName.toLowerCase();
+  //   
+  //   // 정확한 캐릭터 이름 매칭
+  //   if (name.includes('햄삐') || name.includes('ham')) {
+  //     return images.allCharacters.ham?.normal;
+  //   } else if (name.includes('아리삐') || name.includes('chick')) {
+  //     return images.allCharacters.chick?.normal;
+  //   } else if (name.includes('래삐') || name.includes('rabbit')) {
+  //     return images.allCharacters.rabbit?.normal;
+  //   } else if (name.includes('멍삐') || name.includes('dog')) {
+  //     return images.allCharacters.dog?.normal;
+  //   } else if (name.includes('사삐') || name.includes('lion')) {
+  //     return images.allCharacters.lion?.normal;
+  //   } else if (name.includes('구리삐') || name.includes('rac')) {
+  //     return images.allCharacters.rac?.normal;
+  //   } else if (name.includes('냥삐') || name.includes('cat')) {
+  //     return images.allCharacters.cat?.normal;
+  //   } else if (name.includes('여삐') || name.includes('fox')) {
+  //     return images.allCharacters.fox?.normal;
+  //   } else if (name.includes('고미삐') || name.includes('bear')) {
+  //     return images.allCharacters.bear?.normal;
+  //   }
+  //   
+  //   // 기본 이미지
+  //   return images.allCharacters.ham?.normal;
+  // };
 
   // 해당 날짜의 일기 항목들 가져오기 (백엔드 데이터만 사용)
   const getEntriesForDate = (date: Date) => {
@@ -427,34 +442,80 @@ const CollectionScreen = () => {
     'bear': { name: '고미삐', concept: 'farm' as ConceptType },
   };
 
+  // characterId -> 이름/컨셉 매핑 (대화 다시보기 시 동일 이미지/배경 유지)
+  const mapCharacterMeta = (characterId: string): { name: string; concept: ConceptType } => {
+    switch (characterId) {
+      case 'ham_1':
+        return { name: '햄삐', concept: 'space' };
+      case 'fox_1':
+        return { name: '여삐', concept: 'space' };
+      case 'lion_1':
+        return { name: '사삐', concept: 'space' };
+      case 'chick_1':
+        return { name: '아리삐', concept: 'school' };
+      case 'dog_1':
+        return { name: '멍삐', concept: 'school' };
+      case 'cat_1':
+        return { name: '냥삐', concept: 'school' };
+      case 'rabbit_1':
+        return { name: '래삐', concept: 'farm' };
+      case 'rac_1':
+        return { name: '구리삐', concept: 'farm' };
+      case 'bear_1':
+        return { name: '고미삐', concept: 'farm' };
+      default:
+        return { name: '햄삐', concept: 'space' };
+    }
+  };
+
   // 대화 보기 핸들러 (백엔드 데이터 지원)
   const handleViewConversation = async (entry: any) => {
     if ('roomId' in entry) {
       // 백엔드 데이터인 경우 - 실제 채팅 메시지를 불러와서 바로 채팅 UI로 이동
       try {
         console.log('💬 채팅 내역 불러오기 시작, roomId:', entry.roomId);
-        
-        // 캐릭터 정보 설정 (ChatHistoryScreen용)
-        const mockCharacter = {
-          id: 'ham_1',
-          name: '햄삐',
-          concept: 'space' as ConceptType,
-          description: '햄삐와의 추억',
-        };
-        
-        setSelectedCharacter(mockCharacter);
-        setSelectedConcept(mockCharacter.concept);
-        setSelectedEmotion('happy');
-        
-        // 채팅 기록 화면용 대화 정보 설정 (메시지는 ChatHistoryScreen에서 직접 로드)
-        setCurrentConversation({
-          id: entry.id.toString(),
-          characterId: mockCharacter.id,
-          emotion: 'happy',
-          messages: [], // ChatHistoryScreen에서 직접 로드
-          createdAt: new Date(entry.createdAt),
-          roomId: entry.roomId,
-        });
+
+        // 저장된 대화에서 해당 roomId의 메타 복원
+        const matched = conversations.find(c => c.roomId === entry.roomId);
+        if (matched) {
+          const meta = mapCharacterMeta(matched.characterId);
+          const character: Character = {
+            id: matched.characterId,
+            name: meta.name,
+            concept: meta.concept,
+            description: `${meta.name}와의 대화`,
+          };
+
+          setSelectedCharacter(character);
+          setSelectedConcept(meta.concept);
+          setSelectedEmotion(matched.emotion);
+
+          // 화면용 대화 정보 설정 (메시지는 ChatHistoryScreen에서 직접 로드)
+          setCurrentConversation({
+            ...matched,
+            messages: [],
+          });
+        } else {
+          // 매칭되는 로컬 대화가 없을 때 안전한 기본값 (앱 재시작 등)
+          const fallback = mapCharacterMeta('ham_1');
+          const character: Character = {
+            id: 'ham_1',
+            name: fallback.name,
+            concept: fallback.concept,
+            description: `${fallback.name}와의 대화`,
+          };
+          setSelectedCharacter(character);
+          setSelectedConcept(character.concept);
+          setSelectedEmotion('happy');
+          setCurrentConversation({
+            id: String(entry.roomId),
+            characterId: character.id,
+            emotion: 'happy',
+            messages: [],
+            createdAt: new Date(entry.createdAt),
+            roomId: entry.roomId,
+          });
+        }
         
         setShowModal(false);
         setCurrentStep('chatHistory'); // 채팅 기록 전용 UI로 이동
@@ -556,6 +617,8 @@ const CollectionScreen = () => {
   // 요일 헤더
   const weekDays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
+
+
   return (
     <ImageBackground 
       source={images.backgrounds.main} 
@@ -563,88 +626,98 @@ const CollectionScreen = () => {
       resizeMode="cover"
     >
       <SafeAreaView style={styles.safeArea}>
-        {/* 헤더 */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>기록 보러가기</Text>
-          <TouchableOpacity style={styles.newButton} onPress={handleNewConversation}>
-            <Text style={styles.newButtonText}>새로운 대화</Text>
-          </TouchableOpacity>
-        </View>
+        <ScrollView 
+          style={styles.scrollContainer}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* 상단 패딩 추가 */}
+          <View style={styles.topPadding} />
 
-        {/* 달력 카드 */}
-        <View style={styles.calendarCard}>
-          {/* 달력 상단 */}
-          <View style={styles.calendarHeader}>
-            <View style={styles.monthContainer}>
-              <Text style={styles.monthNumber}>
-                {String(currentMonth.getMonth() + 1).padStart(2, '0')}
-              </Text>
-              <View style={styles.monthDivider} />
-              <View style={styles.monthTextContainer}>
-                <Text style={styles.monthText}>{getMonthName(currentMonth)}</Text>
-                <Text style={styles.yearText}>{currentMonth.getFullYear()}</Text>
+          {/* 헤더 */}
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+              <Text style={styles.backButtonText}>←</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>기록 보러가기</Text>
+            <TouchableOpacity style={styles.newButton} onPress={handleNewConversation}>
+              <Text style={styles.newButtonText}>새로운 대화</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 달력 카드 */}
+          <View style={styles.calendarCard}>
+            {/* 달력 상단 */}
+            <View style={styles.calendarHeader}>
+              <View style={styles.monthContainer}>
+                <Text style={styles.monthNumber}>
+                  {String(currentMonth.getMonth() + 1).padStart(2, '0')}
+                </Text>
+                <View style={styles.monthDivider} />
+                <View style={styles.monthTextContainer}>
+                  <Text style={styles.monthText}>{getMonthName(currentMonth)}</Text>
+                  <Text style={styles.yearText}>{currentMonth.getFullYear()}</Text>
+                </View>
               </View>
             </View>
-          </View>
 
-          {/* 요일 헤더 */}
-          <View style={styles.weekHeader}>
-            {weekDays.map((day, index) => (
-              <View key={index} style={styles.weekDay}>
-                <Text style={styles.weekDayText}>{day}</Text>
-              </View>
-            ))}
-          </View>
+            {/* 요일 헤더 */}
+            <View style={styles.weekHeader}>
+              {weekDays.map((day, index) => (
+                <View key={index} style={styles.weekDay}>
+                  <Text style={styles.weekDayText}>{day}</Text>
+                </View>
+              ))}
+            </View>
 
-          {/* 달력 그리드 */}
-          <View style={styles.calendarGrid}>
-            {calendarData.map((date, index) => {
-              const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
-              const isToday = date.toDateString() === new Date().toDateString();
-              const entries = getEntriesForDate(date);
-              
-              return (
-                <TouchableOpacity 
-                  key={index} 
-                  style={[
-                    styles.calendarDay,
-                    !isCurrentMonth && styles.otherMonthDay,
-                    isToday && styles.todayDay
-                  ]}
-                  onPress={() => handleDatePress(date)}
-                  disabled={entries.length === 0}
-                >
-                  <Text style={[
-                    styles.dayText,
-                    !isCurrentMonth && styles.otherMonthText,
-                    isToday && styles.todayText
-                  ]}>
-                    {date.getDate()}
-                  </Text>
-                  
-                  {/* 아이콘들 */}
-                  {entries.length > 0 && (
-                    <View style={styles.singleIconContainer}>
-                      <View style={styles.singleIconWrapper}>
-                        <Image 
-                          source={getIconForEntry(entries[0])} 
-                          style={styles.singleIconImage}
-                          resizeMode="contain"
-                        />
+            {/* 달력 그리드 */}
+            <View style={styles.calendarGrid}>
+              {calendarData.map((date, index) => {
+                const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
+                const isToday = date.toDateString() === new Date().toDateString();
+                const entries = getEntriesForDate(date);
+                
+                return (
+                  <TouchableOpacity 
+                    key={index} 
+                    style={[
+                      styles.calendarDay,
+                      !isCurrentMonth && styles.otherMonthDay,
+                      isToday && styles.todayDay,
+                      entries.length > 0 && styles.hasEntries
+                    ]}
+                    onPress={() => handleDatePress(date)}
+                    disabled={entries.length === 0}
+                  >
+                    <Text style={[
+                      styles.dayText,
+                      !isCurrentMonth && styles.otherMonthText,
+                      isToday && styles.todayText
+                    ]}>
+                      {date.getDate()}
+                    </Text>
+                    
+                    {/* 아이콘들만 표시 */}
+                    {entries.length > 0 && (
+                      <View style={styles.singleIconContainer}>
+                        <View style={styles.singleIconWrapper}>
+                          <Image 
+                            source={getIconForEntry(entries[0])} 
+                            style={styles.singleIconImage}
+                            resizeMode="contain"
+                          />
+                        </View>
+                        {entries.length > 1 && (
+                          <Text style={styles.moreIndicator}>...</Text>
+                        )}
                       </View>
-                      {entries.length > 1 && (
-                        <Text style={styles.moreIndicator}>...</Text>
-                      )}
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-        </View>
+        </ScrollView>
 
         {/* 선택 모달 */}
         <Modal
@@ -660,93 +733,79 @@ const CollectionScreen = () => {
               </Text>
               
               <ScrollView style={styles.entriesList}>
-                {selectedDate && getEntriesForDate(selectedDate).map((entry: any, index: number) => {
+                {selectedDate && getEntriesForDate(selectedDate).map((entry: any) => {
                   const isBackendEntry = 'roomId' in entry;
                   
                   // 백엔드 데이터인 경우
                   if (isBackendEntry) {
                     const time = formatTimeInTZ(entry.createdAt, KST);
-                    const title = entry.summary && entry.summary.length > 0 
-                      ? entry.summary.slice(0, 30) + (entry.summary.length > 30 ? '...' : '')
-                      : `${index + 1}번째 대화`;
+                    // 저장된 대화에서 roomId 매칭 → 캐릭터/감정 복원
+                    const matched = conversations.find(c => c.roomId === entry.roomId);
                     
-                    return (
-                      <View key={entry.id} style={styles.entryItem}>
-                        <View style={styles.entryHeader}>
-                          <View style={styles.entryContent}>
-                            <Image 
-                              source={getIconForEntry(entry)} 
-                              style={styles.characterImage}
-                            />
-                            <View style={styles.entryTextContent}>
-                              <Text style={styles.entryTitle}>{title}</Text>
+                    if (matched) {
+                      const meta = mapCharacterMeta(matched.characterId);
+                      const title = `${meta.name}와의 대화`;
+                      
+                      return (
+                        <View key={entry.id} style={styles.entryItem}>
+                          <View style={styles.entryHeader}>
+                            <View style={styles.entryContent}>
+                              <Image
+                                source={getIconForEntry(entry)}
+                                style={styles.entryIcon}
+                                resizeMode="contain"
+                              />
+                              <View style={styles.entryTextContent}>
+                                <Text style={styles.entryTitle}>{title}</Text>
+                              </View>
                             </View>
+                            <Text style={styles.entryTime}>{time}</Text>
                           </View>
-                          <Text style={styles.entryTime}>{time}</Text>
+                          <View style={styles.entryButtons}>
+                            <TouchableOpacity
+                              style={styles.viewButton}
+                              onPress={() => handleViewConversation(entry)}
+                            >
+                              <Text style={styles.viewButtonText}>대화</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.viewButton}
+                              onPress={() => handleViewDiary(entry)}
+                            >
+                              <Text style={styles.viewButtonText}>일기</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.reportButton}
+                              onPress={() => {
+                                if (!selectedDate) {
+                                  return;
+                                }
+                                setSelectedReportDate(selectedDate);
+                                setCurrentStep('report');
+                                setShowModal(false);
+                              }}
+                            >
+                              <Text style={styles.reportButtonText}>리포트</Text>
+                            </TouchableOpacity>
+                          </View>
                         </View>
-                        <View style={styles.entryButtons}>
-                          <TouchableOpacity 
-                            style={styles.conversationButton}
-                            onPress={() => handleViewConversation(entry)}
-                          >
-                            <Text style={styles.buttonText}>대화</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity 
-                            style={styles.diaryButton}
-                            onPress={() => handleViewDiary(entry)}
-                          >
-                            <Text style={styles.buttonText}>일기</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    );
+                      );
+                    }
                   }
                   
-                  // Mock 데이터인 경우 (기존 로직)
-                  const title = (entry as any).title;
-                  const time = (entry as any).time;
-                  const characterImage = getCharacterImage((entry as any).title);
-                  
-                  return (
-                    <View key={(entry as any).id} style={styles.entryItem}>
-                      <View style={styles.entryHeader}>
-                        <View style={styles.entryContent}>
-                          <Image 
-                            source={characterImage} 
-                            style={styles.characterImage}
-                          />
-                          <Text style={styles.entryTitle}>{title}</Text>
-                        </View>
-                        <Text style={styles.entryTime}>{time}</Text>
-                      </View>
-                      <View style={styles.entryButtons}>
-                        <TouchableOpacity 
-                          style={styles.conversationButton}
-                          onPress={() => handleViewConversation(entry)}
-                        >
-                          <Text style={styles.buttonText}>대화</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          style={styles.diaryButton}
-                          onPress={() => handleViewDiary(entry)}
-                        >
-                          <Text style={styles.buttonText}>일기</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
+                  // 기존 로컬 데이터인 경우 (필요시)
+                  return null;
                 })}
               </ScrollView>
               
-              <TouchableOpacity 
-                style={styles.closeButton}
-                onPress={() => setShowModal(false)}
-              >
+              <TouchableOpacity style={styles.closeButton} onPress={() => setShowModal(false)}>
                 <Text style={styles.closeButtonText}>닫기</Text>
               </TouchableOpacity>
             </View>
           </View>
         </Modal>
+
+
       </SafeAreaView>
     </ImageBackground>
   );
@@ -758,17 +817,33 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+    backgroundColor: 'transparent',
+    paddingTop: -SIZES.lg,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  topPadding: {
+    height: SIZES.md, // 상단 패딩 줄임
+  },
+  scrollContent: {
+    alignItems: 'center',
+    paddingTop: SIZES.sm, // 상단 여백 조정
+    paddingBottom: SIZES.sm, // 최소 여백
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-between', // 뒤로가기와 새로운 대화 버튼을 양쪽 끝으로
     alignItems: 'center',
-    padding: SIZES.lg,
+    padding: SIZES.lg, // 패딩 증가
+    marginBottom: SIZES.md, // 하단 여백 증가
+    width: '95%', // 너비 증가
+    paddingTop: SIZES.xl * 2, // 높이 올림
   },
   backButton: {
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: SIZES.md,
-    paddingVertical: SIZES.sm,
+    paddingHorizontal: SIZES.md, // 원래대로
+    paddingVertical: SIZES.sm, // 원래대로
     borderRadius: 20,
   },
   backButtonText: {
@@ -776,14 +851,14 @@ const styles = StyleSheet.create({
     color: '#333333',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#333333',
   },
   newButton: {
     backgroundColor: '#FF69B4',
-    paddingHorizontal: SIZES.md,
-    paddingVertical: SIZES.sm,
+    paddingHorizontal: SIZES.md, // 원래대로
+    paddingVertical: SIZES.sm, // 원래대로
     borderRadius: 20,
   },
   newButtonText: {
@@ -793,23 +868,24 @@ const styles = StyleSheet.create({
   },
   calendarCard: {
     backgroundColor: '#FFFFFF',
-    margin: SIZES.lg,
     borderRadius: 20,
-    padding: SIZES.lg,
+    padding: SIZES.sm, // 최소 패딩
+    marginHorizontal: SIZES.sm, // 여백 줄임
+    marginBottom: SIZES.xs, // 최소 여백
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowRadius: 8,
+    elevation: 3,
   },
   calendarHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SIZES.lg,
+    marginBottom: SIZES.sm, // 여백 줄임
   },
   monthContainer: {
     flexDirection: 'row',
@@ -840,7 +916,7 @@ const styles = StyleSheet.create({
   },
   weekHeader: {
     flexDirection: 'row',
-    marginBottom: SIZES.sm,
+    marginBottom: SIZES.xs, // 여백 줄임
   },
   weekDay: {
     flex: 1,
@@ -855,7 +931,8 @@ const styles = StyleSheet.create({
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    width: '100%',
+    justifyContent: 'space-between',
+    paddingBottom: SIZES.xs, // 최소 여백
   },
   calendarDay: {
     width: '14.285%', // 100% / 7 = 14.285%
@@ -969,6 +1046,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'transparent',
   },
+  entryIcon: { // Changed from characterImage
+    width: 30,
+    height: 30,
+    marginRight: SIZES.sm,
+  },
   entryTextContent: {
     flex: 1,
     marginLeft: SIZES.sm,
@@ -1007,6 +1089,19 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     minWidth: 80,
   },
+  viewButton: { // Added for new buttons
+    backgroundColor: '#FFB6C1',
+    paddingHorizontal: SIZES.sm, // md에서 sm으로 줄임
+    paddingVertical: SIZES.xs, // sm에서 xs로 줄임
+    borderRadius: 15, // 20에서 15로 줄임
+    minWidth: 60, // 80에서 60으로 줄임
+  },
+  viewButtonText: { // Added for new buttons
+    color: '#FFFFFF',
+    fontSize: 14, // 16에서 14로 줄임
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
@@ -1024,6 +1119,119 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  momContainer: {
+    alignItems: 'center',
+    marginTop: 0, // 여백 완전 제거
+    marginBottom: SIZES.xs, // 최소 여백
+  },
+  momImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+  },
+  reportOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  reportModal: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: SIZES.xl,
+    width: '90%',
+    maxWidth: 450,
+    alignItems: 'center',
+    zIndex: 10000,
+  },
+  reportHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: SIZES.lg,
+  },
+  reportTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  reportContent: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  reportMomContainer: {
+    width: 120,
+    height: 120,
+    marginBottom: SIZES.md,
+    borderRadius: 60,
+    overflow: 'hidden',
+  },
+  reportMomImage: {
+    width: '100%',
+    height: '100%',
+  },
+  reportInfoContainer: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  reportDate: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: SIZES.lg,
+  },
+  reportMessageContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  reportMessageTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: SIZES.sm,
+  },
+  reportMessage: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#333',
+    textAlign: 'center',
+  },
+  entryIndicators: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 5,
+    left: 5,
+  },
+  entryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FF69B4',
+    marginRight: 5,
+  },
+  reportButton: {
+    backgroundColor: '#FFB6C1',
+    paddingHorizontal: SIZES.sm,
+    paddingVertical: SIZES.xs,
+    borderRadius: 15,
+    minWidth: 60,
+  },
+  reportButtonText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  hasEntries: {
+    backgroundColor: '#FFE6F2', // 일기가 있을 때 배경색
   },
 });
 

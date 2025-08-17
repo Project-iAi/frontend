@@ -27,6 +27,7 @@ export interface Character {
   concept: ConceptType;
   description: string;
   imageUrl?: string;
+  apiId?: number; // API에서 받은 캐릭터 ID와 매핑
 }
 
 export interface Concept {
@@ -36,12 +37,12 @@ export interface Concept {
   characters: Character[];
 }
 
-// 감정 관련 타입
+// 감정 관련 타입 - API와 호환되도록 수정
 export type EmotionType = 'happy' | 'sad' | 'angry';
 
 export interface Emotion {
   id: EmotionType;
-  name: string;
+  name: string; // API에서 사용하는 한글 감정명 (예: "기쁨", "슬픔", "화남")
   emoji: string;
   description: string;
 }
@@ -75,8 +76,10 @@ export interface DiaryEntry {
 
 // 앱 상태 관련 타입
 export interface AppState {
-  currentStep: 'onboarding' | 'signup' | 'concept' | 'character' | 'emotion' | 'conversation' | 'diary' | 'collection' | 'diaryDetail' | 'chatHistory';
+  currentStep: 'onboarding' | 'kakaoLogin' | 'signup' | 'concept' | 'character' | 'emotion' | 'conversation' | 'diary' | 'collection' | 'diaryDetail' | 'chatHistory' | 'report';
   user: User | null;
+  jwtToken: string | null; // JWT 토큰
+  profileCompleted: boolean; // 프로필 완료 여부
   selectedConcept: ConceptType | null;
   selectedCharacter: Character | null;
   selectedEmotion: EmotionType | null;
@@ -84,4 +87,5 @@ export interface AppState {
   conversations: Conversation[];
   diaryEntries: DiaryEntry[];
   currentDiary: DiaryEntry | null; // 현재 보고 있는 일기
+  selectedReportDate: Date | null; // 선택된 리포트 날짜
 } 

@@ -10,10 +10,12 @@ import {
   Alert,
   ImageBackground,
   Image,
+  Modal,
   Dimensions,
   ActivityIndicator,
   Platform,
   PermissionsAndroid,
+  InteractionManager,
 } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { characterGreetings } from '../utils/data';
@@ -50,7 +52,13 @@ const ConversationScreen = () => {
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [currentSound, setCurrentSound] = useState<Sound | null>(null);
   const [isCreatingDiary, setIsCreatingDiary] = useState(false);
-  const [diaryRequested, setDiaryRequested] = useState(false);
+  // diaryRequested 상태 제거 - createDiary 함수 내부에서 중복 요청 방지
+  const [showCountdown, setShowCountdown] = useState(false);
+  const [countdown, setCountdown] = useState<number>(3);
+  const countdownTimerRef = useRef<any>(null);
+  const [quizCorrect, setQuizCorrect] = useState(false);
+  const [diaryReady, setDiaryReady] = useState(false);
+  const [quizFeedback, setQuizFeedback] = useState<'none' | 'wrong'>('none');
   // 녹음 상태
   const [isRecording, setIsRecording] = useState(false);
   const [recordingHint, setRecordingHint] = useState<string | null>(null);
@@ -58,7 +66,12 @@ const ConversationScreen = () => {
   
   const socketRef = useRef<any>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+  const inactivityTimerRef = useRef<any>(null);
   const roomId = currentConversation?.roomId;
+
+  // useState Hook을 early return 이전으로 이동
+  const [containerLayout, setContainerLayout] = useState<{ width: number; height: number } | null>(null);
+  const layoutHeight = containerLayout?.height ?? screenHeight;
 
   // 배경 이미지 가져오기
   const getBackground = () => {
@@ -248,12 +261,13 @@ const ConversationScreen = () => {
       return;
     }
 
+    // 중복 요청 방지
+    if (isCreatingDiary) {
+      console.log('일기 생성 중복 요청 방지: 이미 생성 중');
+      return;
+    }
+
     try {
-      if (diaryRequested) {
-        console.log('일기 생성 중복 요청 방지: 이미 요청됨');
-        return;
-      }
-      setDiaryRequested(true);
       setIsCreatingDiary(true);
       console.log('일기 생성 중...');
       const diary = await apiService.createDiary(roomId);
@@ -264,15 +278,45 @@ const ConversationScreen = () => {
       };
       setCurrentDiary(diaryEntry);
       addDiaryEntry(diaryEntry);
-      setCurrentStep('diary');
+      // 같은 모달에서 카운트다운 시작
+      setDiaryReady(true);
+      setCountdown(3);
+      setShowCountdown(true);
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+      }
+      countdownTimerRef.current = setInterval(() => {
+        setCountdown((prev) => Math.max(prev - 1, 0));
+      }, 1000);
     } catch (error) {
       console.error('일기 생성 실패:', error);
       Alert.alert('오류', '일기 생성에 실패했습니다.');
-      setDiaryRequested(false);
+      // diaryRequested 상태 제거됨
     } finally {
+      // 성공 경로에서 이미 false 처리, 실패 시에만 여기서 끔
       setIsCreatingDiary(false);
     }
-  }, [roomId, diaryRequested, setCurrentDiary, addDiaryEntry, setCurrentStep]);
+  }, [roomId, setCurrentDiary, addDiaryEntry, isCreatingDiary]);
+
+  // 카운트다운 종료 시 화면 전환 (렌더 중 setState 충돌 방지)
+  const handleCountdownComplete = useCallback(() => {
+    setShowCountdown(false);
+    setQuizCorrect(false);
+    setDiaryReady(false);
+    setIsCreatingDiary(false);
+    setCurrentStep('diary');
+  }, [setCurrentStep]);
+
+  useEffect(() => {
+    if (showCountdown && countdown === 0) {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+      // 다음 틱으로 넘겨 안전하게 전환
+      setTimeout(handleCountdownComplete, 0);
+    }
+  }, [showCountdown, countdown, handleCountdownComplete]);
 
   // WebSocket 연결 설정 (실시간 채팅 전용)
   useEffect(() => {
@@ -300,6 +344,14 @@ const ConversationScreen = () => {
       // 메시지 수신
       socket.on('message', (message: SocketMessage) => {
         console.log('새 메시지 수신:', message);
+        // 대화 활동 감지 → 무응답 타이머 리셋
+        if (inactivityTimerRef.current) {
+          clearTimeout(inactivityTimerRef.current);
+        }
+        inactivityTimerRef.current = setTimeout(() => {
+          console.log('⏱️ 20초 무응답 → 자동 일기 생성');
+          createDiary();
+        }, 20000);
         
         setMessages(prev => {
           if (message.sender === 'ai') {
@@ -350,9 +402,8 @@ const ConversationScreen = () => {
       // 세션 타임아웃
       socket.on('sessionTimeout', (data: any) => {
         console.log('세션 타임아웃:', data);
-        Alert.alert('세션 만료', '20초 동안 대화가 없어 자동으로 일기를 생성합니다.', [
-          { text: '확인', onPress: () => createDiary() }
-        ]);
+        // 20초 이상 지속되지 않았을 때만 자동 생성 (중복 방지)
+        createDiary();
       });
 
       // 오류 처리
@@ -363,6 +414,10 @@ const ConversationScreen = () => {
 
       return () => {
         socketService.disconnect(socket);
+        if (inactivityTimerRef.current) {
+          clearTimeout(inactivityTimerRef.current);
+          inactivityTimerRef.current = null;
+        }
       };
     }
   }, [currentConversation?.roomId, playAudioFromBase64, createDiary]);
@@ -380,6 +435,15 @@ const ConversationScreen = () => {
     try {
       console.log('메시지 전송:', messageText);
       socketService.sendMessage(socketRef.current, roomId, messageText);
+      // 사용자 활동 → 무응답 타이머 리셋
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+      inactivityTimerRef.current = setTimeout(() => {
+        // diaryRequested 상태를 직접 확인하지 않고 createDiary 함수 내부에서 처리
+        console.log('⏱️ 20초 무응답 → 자동 일기 생성');
+        createDiary();
+      }, 20000);
       
       // 사용자 메시지를 즉시 UI에 추가
       const userMessage: SocketMessage = {
@@ -410,20 +474,14 @@ const ConversationScreen = () => {
   };
 
   const handleEndConversation = () => {
-    Alert.alert(
-      '대화 종료',
-      '대화를 종료하고 일기를 생성하시겠습니까?',
-      [
-        {
-          text: '취소',
-          style: 'cancel',
-        },
-        {
-          text: '일기 생성',
-          onPress: () => createDiary(),
-        },
-      ]
-    );
+    // diaryRequested 체크를 제거하고 createDiary 함수 내부에서 처리
+    // 종료 버튼 누르면 모달을 즉시 표시하고, UI 프레임 이후 생성 요청
+    setIsCreatingDiary(true);
+    InteractionManager.runAfterInteractions(() => {
+      requestAnimationFrame(() => {
+        createDiary();
+      });
+    });
   };
 
   useEffect(() => {
@@ -463,6 +521,12 @@ const ConversationScreen = () => {
       source={getBackground()} 
       style={styles.container}
       resizeMode="cover"
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        console.log('📱 iOS 화면 크기:', Platform.OS, 'width:', width, 'height:', height);
+        console.log('📱 screenHeight:', screenHeight, '계산된 높이:', height * 0.75);
+        setContainerLayout({ width, height });
+      }}
     >
       <SafeAreaView style={styles.safeArea}>
         {/* 뒤로가기 버튼 */}
@@ -478,11 +542,21 @@ const ConversationScreen = () => {
         {/* 캐릭터 이미지 */}
         <Image 
           source={getCharacterImage()} 
-          style={styles.characterImage}
+          resizeMode="contain"
+          style={[
+            styles.characterImage,
+            selectedCharacter?.id === 'cat_1' && styles.characterImageCat,
+            { top: layoutHeight * 0.1 },
+          ]}
         />
 
         {/* 채팅 창 */}
-        <View style={styles.chatContainer}>
+        <View style={[
+          styles.chatContainer, 
+          Platform.OS === 'ios' 
+            ? { height: layoutHeight * 0.85 } // iOS에서 더 길게
+            : { height: layoutHeight * 0.68 } // Android는 기존 크기
+        ]}>
           {/* 연결 상태 표시 - 채팅창 상단 */}
           <View style={styles.statusContainer}>
             <Text style={styles.statusText}>
@@ -569,15 +643,68 @@ const ConversationScreen = () => {
           </View>
         )}
       </SafeAreaView>
-      {/* 일기 생성 로딩 모달 */}
-      {isCreatingDiary && (
+      {/* 일기 생성 로딩 모달 (최상단 오버레이) */}
+      <Modal
+        visible={isCreatingDiary}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingModal}>
-            <ActivityIndicator size="large" color="#FFB6C1" />
-            <Text style={styles.loadingModalText}>일기를 생성하고 있어요...</Text>
+            {/* 캐릭터 미니 이미지 (확대) + 모자 아이콘(정답 후에만) 오버레이 */}
+            <View style={styles.avatarContainer}>
+              <Image
+                source={getCharacterImage() || images.allCharacters.ham.variant}
+                style={styles.avatarImage}
+                resizeMode="contain"
+              />
+              {quizCorrect && <Text style={[styles.hatIcon, { marginLeft: -3 }]}>🎩</Text>}
+            </View>
+            {!quizCorrect && (
+              <>
+                <Text style={styles.loadingModalText}>작은 퀴즈를 풀어볼까요? 2 + 3 = ?</Text>
+                <View style={styles.quizOptionsRow}>
+                  {[3,5,6].map((opt) => (
+                    <TouchableOpacity key={opt} style={[styles.quizOptionButton, styles.quizOptionButtonCustom]} onPress={() => {
+                      if (opt === 5) {
+                        setQuizFeedback('none');
+                        setQuizCorrect(true);
+                      } else {
+                        setQuizFeedback('wrong');
+                      }
+                    }}>
+                      <Text style={[styles.quizOptionText, styles.quizOptionTextCustom]}>{opt}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {quizFeedback === 'wrong' ? (
+                  <Text style={styles.quizWrongText}>틀렸어요! 다시 선택해보세요.</Text>
+                ) : (
+                  <Text style={[styles.loadingModalText, styles.quizHintText]}>정답을 맞히면 축하 화면이 나와요!</Text>
+                )}
+              </>
+            )}
+
+            {quizCorrect && (
+              <>
+                <Text style={styles.rewardTitle}>축하해요! 모자 아이템을 받았어요 🎩</Text>
+                {/* 일기 준비가 완료되면 같은 모달에서 카운트다운 노출 */}
+                {diaryReady ? (
+                  <Text style={[styles.countdownText, styles.countdownTextCustom]}>{countdown}</Text>
+                ) : (
+                  <View style={styles.diaryPreparingContainer}>
+                    <ActivityIndicator size="small" color="#FFB6C1" />
+                    <Text style={[styles.loadingModalText, styles.diaryPreparingText]}>일기를 준비하고 있어요...</Text>
+                  </View>
+                )}
+              </>
+            )}
           </View>
         </View>
-      )}
+      </Modal>
+      {/* 카운트다운 모달 (최상단 오버레이) */}
+      {/* 별도의 카운트다운 모달 제거: 로딩 모달에서 함께 표시 */}
     </ImageBackground>
   );
 };
@@ -585,8 +712,9 @@ const ConversationScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: screenWidth,
+    width: Platform.OS === 'ios' ? screenWidth * 1.1 : screenWidth, // iOS에서 가로 10% 확장
     height: screenHeight,
+    // 전체 화면 활용 (공백 없음)
   },
   safeArea: {
     flex: 1,
@@ -609,12 +737,18 @@ const styles = StyleSheet.create({
     zIndex: 1,
     backgroundColor: 'transparent',
   },
+  characterImageCat: {
+    width: 360,
+    height: 360,
+    top: screenHeight * 0.07,
+    transform: [{ translateX: -180 }],
+  },
   chatContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: Platform.OS === 'ios' ? -20 : -10, // iOS에서 더 아래로
     left: 0,
     right: 0,
-    height: screenHeight * 0.65,
+    height: Platform.OS === 'ios' ? screenHeight * 0.85 : screenHeight * 0.75, // iOS에서 더 길게
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
@@ -736,14 +870,57 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 999,
+    zIndex: 9999,
   },
   loadingModal: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: SIZES.xl,
     alignItems: 'center',
-    width: '70%',
+    width: '80%', // 너비 증가
+    maxWidth: 350, // 최대 너비 제한
+  },
+  quizOptionButton: {
+    backgroundColor: '#FFB6C1',
+    paddingHorizontal: SIZES.xs, // 가로 크기 더 줄임
+    paddingVertical: SIZES.sm,
+    borderRadius: 12,
+    minWidth: 50, // 최소 너비 설정
+    maxWidth: 60, // 최대 너비 제한
+  },
+  quizOptionText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    minWidth: 40,
+    textAlignVertical: 'center', // Android용 세로 중앙 정렬
+    lineHeight: 18, // 텍스트 세로 중앙 정렬을 위한 lineHeight 설정
+  },
+  quizOptionsRow: {
+    flexDirection: 'row',
+    marginTop: SIZES.sm,
+    justifyContent: 'center', // 중앙 정렬
+    alignItems: 'center',
+    width: '100%',
+    gap: SIZES.sm, // 버튼 사이 간격 줄임
+  },
+  quizOptionButtonCustom: {
+    paddingHorizontal: SIZES.md,
+    paddingVertical: SIZES.sm,
+  },
+  quizOptionTextCustom: {
+    fontSize: 16,
+  },
+  quizHintText: {
+    marginTop: SIZES.sm,
+    fontSize: 14,
+  },
+  diaryPreparingContainer: {
+    marginTop: SIZES.sm,
+  },
+  diaryPreparingText: {
+    fontSize: 14,
   },
   loadingModalText: {
     marginTop: SIZES.md,
@@ -751,6 +928,59 @@ const styles = StyleSheet.create({
     color: '#333333',
     fontWeight: '600',
     textAlign: 'center',
+  },
+  countdownModal: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: SIZES.xl,
+    paddingHorizontal: SIZES.xl,
+    alignItems: 'center',
+    width: '60%',
+  },
+  countdownText: {
+    fontSize: 64,
+    fontWeight: 'bold',
+    color: '#FF69B4',
+  },
+  countdownTextCustom: {
+    marginTop: SIZES.sm,
+  },
+  countdownSubText: {
+    marginTop: SIZES.sm,
+    fontSize: 16,
+    color: '#333',
+  },
+  quizWrongText: {
+    marginTop: SIZES.sm,
+    fontSize: 14,
+    color: '#FF3B30',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  rewardTitle: {
+    marginTop: SIZES.sm,
+    fontSize: 18,
+    color: '#333333',
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  avatarContainer: {
+    width: 72,
+    height: 72,
+    marginBottom: SIZES.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarImage: {
+    width: 72,
+    height: 72,
+  },
+  hatIcon: {
+    position: 'absolute',
+    top: -12, // 위로 약간 올림
+    left: '50%',
+    transform: [{ translateX: -12 }, { rotate: '-10deg' }], // 왼쪽으로 약간 이동
+    fontSize: 24,
   },
   backButton: {
     position: 'absolute',
@@ -894,6 +1124,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: SIZES.sm,
   },
+
   micButtonRecording: {
     backgroundColor: '#FF3B30',
   },
@@ -912,6 +1143,7 @@ const styles = StyleSheet.create({
     marginLeft: SIZES.sm,
     color: '#FF3B30',
   },
+  // 아래 스타일은 상단에 이미 정의되어 중복 제거됨
 });
 
 export default ConversationScreen;

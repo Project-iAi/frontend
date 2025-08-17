@@ -8,6 +8,10 @@ interface AppStore extends AppState {
   // 사용자 관리
   setUser: (user: User) => void;
   
+  // 인증 관리
+  setJwtToken: (token: string | null) => void;
+  setProfileCompleted: (completed: boolean) => void;
+  
   // 컨셉 및 캐릭터 관리
   setSelectedConcept: (concept: ConceptType) => void;
   setSelectedCharacter: (character: Character) => void;
@@ -24,6 +28,9 @@ interface AppStore extends AppState {
   addDiaryEntry: (entry: DiaryEntry) => void;
   setCurrentDiary: (diary: DiaryEntry | null) => void;
   
+  // 리포트 관리
+  setSelectedReportDate: (date: Date | null) => void;
+  
   // 리셋
   resetApp: () => void;
 }
@@ -31,6 +38,8 @@ interface AppStore extends AppState {
 const initialState: AppState = {
   currentStep: 'onboarding',
   user: null,
+  jwtToken: null,
+  profileCompleted: false,
   selectedConcept: null,
   selectedCharacter: null,
   selectedEmotion: null,
@@ -38,6 +47,7 @@ const initialState: AppState = {
   conversations: [],
   diaryEntries: [],
   currentDiary: null,
+  selectedReportDate: null,
 };
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -49,6 +59,14 @@ export const useAppStore = create<AppStore>((set) => ({
 
   setUser: (user) => {
     set({ user });
+  },
+
+  setJwtToken: (token) => {
+    set({ jwtToken: token });
+  },
+
+  setProfileCompleted: (completed) => {
+    set({ profileCompleted: completed });
   },
 
   setSelectedConcept: (concept) => {
@@ -101,6 +119,10 @@ export const useAppStore = create<AppStore>((set) => ({
 
   setCurrentDiary: (diary) => {
     set({ currentDiary: diary });
+  },
+
+  setSelectedReportDate: (date) => {
+    set({ selectedReportDate: date });
   },
 
   resetApp: () => {

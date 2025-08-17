@@ -6,9 +6,10 @@
  */
 
 import React from 'react';
-import { LogBox } from 'react-native';
+import { LogBox, Platform, useWindowDimensions, View } from 'react-native';
 import { useAppStore } from './src/store/useAppStore';
 import OnboardingScreen from './src/components/OnboardingScreen';
+import KakaoLoginScreen from './src/components/KakaoLoginScreen';
 import SignupScreen from './src/components/SignupScreen';
 import ConceptScreen from './src/components/ConceptScreen';
 import CharacterScreen from './src/components/CharacterScreen';
@@ -17,6 +18,7 @@ import DiaryScreen from './src/components/DiaryScreen';
 import CollectionScreen from './src/components/CollectionScreen';
 import DiaryDetailScreen from './src/components/DiaryDetailScreen';
 import ChatHistoryScreen from './src/components/ChatHistoryScreen';
+import ReportScreen from './src/components/ReportScreen';
 
 // 경고 메시지 숨기기
 LogBox.ignoreLogs([
@@ -26,6 +28,43 @@ LogBox.ignoreLogs([
   'AsyncStorage has been extracted',
 ]);
 
+const DESIGN_WIDTH = 393;   // iPhone 16/16 Pro 기준
+const DESIGN_HEIGHT = 852;  // iPhone 16/16 Pro 기준
+const SCREEN_SCALE = 1;   // iPad 화면 대비 프레임 가로/세로 90% 사용 (조절 가능)
+
+const PhoneFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { width, height } = useWindowDimensions();
+  // 가로/세로 모두 화면에 맞도록 스케일. 필요 시 SCREEN_SCALE로 여백 확보
+  const scale = Math.min(
+    (width * SCREEN_SCALE) / DESIGN_WIDTH,
+    (height * SCREEN_SCALE) / DESIGN_HEIGHT,
+  );
+  
+  const containerStyle = {
+    flex: 1,
+    backgroundColor: '#000',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  };
+  
+  const frameStyle = {
+    width: DESIGN_WIDTH,
+    height: DESIGN_HEIGHT,
+    transform: [{ scale }],
+    overflow: 'hidden' as const,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+  };
+  
+  return (
+    <View style={containerStyle}>
+      <View style={frameStyle}>
+        {children}
+      </View>
+    </View>
+  );
+};
+
 const App = () => {
   const { currentStep } = useAppStore();
 
@@ -33,6 +72,8 @@ const App = () => {
     switch (currentStep) {
       case 'onboarding':
         return <OnboardingScreen />;
+      case 'kakaoLogin':
+        return <KakaoLoginScreen />;
       case 'signup':
         return <SignupScreen />;
       case 'concept':
@@ -49,12 +90,21 @@ const App = () => {
         return <DiaryDetailScreen />;
       case 'chatHistory':
         return <ChatHistoryScreen />;
+      case 'report':
+        return <ReportScreen />;
       default:
         return <OnboardingScreen />;
     }
   };
 
-  return renderScreen();
+  const content = renderScreen();
+  // iPad에서만 아이폰 프레임 적용
+  // iPad 호환 모드(아이폰 전용 빌드)에서는 Platform.isPad가 false가 되어 프레임이 적용되지 않습니다.
+  // iOS 전체에서 프레임을 적용하도록 변경합니다.
+  if (Platform.OS === 'ios') {
+    return <PhoneFrame>{content}</PhoneFrame>;
+  }
+  return content;
 };
 
 export default App;
