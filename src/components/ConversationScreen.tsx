@@ -34,9 +34,11 @@ const ConversationScreen = () => {
   const { 
     selectedCharacter, 
     selectedConcept,
+    selectedEmotion,
     user,
     currentConversation,
     setCurrentStep,
+    setCurrentConversation,
     addMessage,
     setCurrentDiary,
     addDiaryEntry
@@ -44,6 +46,8 @@ const ConversationScreen = () => {
 
   const [inputText, setInputText] = useState('');
   const [_isTyping, _setIsTyping] = useState(false);
+  // 입력 모드 토글 상태 추가
+  const [isMicMode, setIsMicMode] = useState(true);
   // API 관련 state
   const [messages, setMessages] = useState<SocketMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -162,6 +166,11 @@ const ConversationScreen = () => {
   }, []);
 
   // (권한 함수 미사용: 제거)
+
+  // 입력 모드 토글 핸들러 추가
+  const toggleInputMode = () => {
+    setIsMicMode(!isMicMode);
+  };
 
   const startRecording = async () => {
     if (isRecording) return;
@@ -447,7 +456,7 @@ const ConversationScreen = () => {
       
       // 사용자 메시지를 즉시 UI에 추가
       const userMessage: SocketMessage = {
-        id: Date.now(),
+        id: Date.now().toString(),
         sender: 'user',
         text: messageText,
         type: 'text',
@@ -485,8 +494,31 @@ const ConversationScreen = () => {
   };
 
   useEffect(() => {
-    // 초기 대화 설정
-    if (currentConversation && currentConversation.messages.length === 0) {
+    // currentConversation이 없으면 새로운 대화 생성
+    if (!currentConversation && selectedCharacter && user) {
+      const newConversation = {
+        id: Date.now().toString(),
+        roomId: Date.now(),
+        characterId: selectedCharacter.id,
+        emotion: selectedEmotion || 'happy',
+        messages: [],
+        createdAt: new Date(),
+      };
+      
+      // store에 새로운 대화 설정
+      setCurrentConversation(newConversation);
+      
+      // 초기 인사말 추가
+      const initialMessage = {
+        id: '1',
+        sender: 'character' as const,
+        content: (characterGreetings as any)[selectedCharacter.id] || '안녕하세요! 오늘은 어떤 이야기를 나눠볼까요?',
+        timestamp: new Date(),
+      };
+      addMessage(initialMessage);
+    }
+    // 기존 대화가 있으면 초기 메시지만 추가
+    else if (currentConversation && currentConversation.messages.length === 0) {
       const initialMessage = {
         id: '1',
         sender: 'character' as const,
@@ -495,7 +527,7 @@ const ConversationScreen = () => {
       };
       addMessage(initialMessage);
     }
-  }, [currentConversation, selectedCharacter, addMessage]);
+  }, [currentConversation, selectedCharacter, selectedConcept, selectedEmotion, user, addMessage, setCurrentConversation]);
 
   if (!currentConversation || !selectedCharacter || !user) {
     return (
@@ -539,6 +571,30 @@ const ConversationScreen = () => {
           <Text style={styles.endButtonText}>종료</Text>
         </TouchableOpacity>
 
+        {/* 입력 모드 토글 버튼 - 화면 상단 중앙에 고정, 수평 방향 토글 스위치 */}
+        <TouchableOpacity 
+          style={styles.inputModeToggle} 
+          onPress={toggleInputMode}
+        >
+          <View style={styles.toggleSwitch}>
+            <View style={[
+              styles.toggleHandle,
+              { left: isMicMode ? 4 : 38 } // 마이크 모드일 때 왼쪽, 텍스트 모드일 때 오른쪽 (크기 줄임에 따라 조정)
+            ]} />
+            <Text style={[
+              styles.inputModeToggleText,
+              { 
+                position: 'absolute',
+                left: isMicMode ? 8 : '90%', // 마이크 모드일 때는 왼쪽, 텍스트 모드일 때는 더 오른쪽
+                transform: isMicMode ? [] : [{ translateX: -0 }], // 중앙 정렬을 위한 오프셋
+                color: isMicMode ? '#333' : '#333' // 두 모드 모두 진하게
+              }
+            ]}>
+              {isMicMode ? '🎤' : '⌨️'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
         {/* 캐릭터 이미지 */}
         <Image 
           source={getCharacterImage()} 
@@ -555,14 +611,9 @@ const ConversationScreen = () => {
           styles.chatContainer, 
           Platform.OS === 'ios' 
             ? { height: layoutHeight * 0.85 } // iOS에서 더 길게
-            : { height: layoutHeight * 0.68 } // Android는 기존 크기
+            : { height: layoutHeight * 0.68 } // Android에서 원래 높이 유지
         ]}>
-          {/* 연결 상태 표시 - 채팅창 상단 */}
-          <View style={styles.statusContainer}>
-            <Text style={styles.statusText}>
-              {isConnected ? '🟢 연결됨' : '🔴 연결 안됨'}
-            </Text>
-          </View>
+
           <ScrollView 
             ref={scrollViewRef}
             style={styles.messagesContainer}
@@ -604,36 +655,44 @@ const ConversationScreen = () => {
             )}
           </ScrollView>
 
-          {/* 입력창 */}
-          <View style={styles.inputContainer}>
-            {/* 마이크 버튼 */}
-            <TouchableOpacity
-              style={[styles.micButton, isRecording && styles.micButtonRecording]}
-              onPress={isRecording ? stopRecording : startRecording}
-            >
-              <Text style={styles.micButtonText}>{isRecording ? '⏹️' : '🎤'}</Text>
-            </TouchableOpacity>
-            <TextInput
-              style={styles.input}
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder="메시지를 입력하세요..."
-              placeholderTextColor="#999"
-              multiline
-              maxLength={500}
-            />
-            <TouchableOpacity 
-              style={[styles.sendButton, (!inputText.trim() || !isConnected || isSending) && styles.sendButtonDisabled]} 
-              onPress={sendMessage}
-              disabled={!inputText.trim() || !isConnected || isSending}
-            >
-              {isSending ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.sendButtonText}>전송</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          {/* 입력창 - 토글에 따라 마이크 모드 또는 텍스트 입력 모드 */}
+          {isMicMode ? (
+            // 마이크 모드: 챗 컨테이너 내부 중앙에 큰 마이크 버튼 표시
+            <View style={styles.micModeContainerInside}>
+              <TouchableOpacity
+                style={[styles.micButtonLarge, isRecording && styles.micButtonRecording]}
+                onPress={isRecording ? stopRecording : startRecording}
+              >
+                <Text style={styles.micButtonText}>
+                  {isRecording ? '⏹️' : '🎤'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            // 텍스트 입력 모드: 입력창 + 전송 버튼 (마이크 버튼 없음)
+            <View style={styles.inputContainerTextOnly}>
+              <TextInput
+                style={styles.inputTextOnly}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="메시지를 입력하세요..."
+                placeholderTextColor="#999"
+                multiline
+                maxLength={500}
+              />
+              <TouchableOpacity 
+                style={[styles.sendButton, (!inputText.trim() || !isConnected || isSending) && styles.sendButtonDisabled]} 
+                onPress={sendMessage}
+                disabled={!inputText.trim() || !isConnected || isSending}
+              >
+                {isSending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.sendButtonText}>전송</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
         {/* 녹음 상태 표시 */}
         {recordingHint && (
@@ -748,7 +807,7 @@ const styles = StyleSheet.create({
     bottom: Platform.OS === 'ios' ? -20 : -10, // iOS에서 더 아래로
     left: 0,
     right: 0,
-    height: Platform.OS === 'ios' ? screenHeight * 0.85 : screenHeight * 0.75, // iOS에서 더 길게
+    height: Platform.OS === 'ios' ? screenHeight * 0.85 : screenHeight * 0.72, // Android에서 원래 높이 유지
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
@@ -768,7 +827,7 @@ const styles = StyleSheet.create({
     paddingTop: SIZES.lg,
   },
   messagesContent: {
-    paddingBottom: SIZES.lg,
+    paddingBottom: SIZES.xl * 4, // 마이크 버튼 높이만큼 정확히 여백 할당 (가려지지 않도록)
   },
   messageContainer: {
     marginBottom: SIZES.md,
@@ -1143,7 +1202,143 @@ const styles = StyleSheet.create({
     marginLeft: SIZES.sm,
     color: '#FF3B30',
   },
-  // 아래 스타일은 상단에 이미 정의되어 중복 제거됨
+  
+  // 마이크 모드일 때 중앙 정렬 - 채팅창 아래에 위치
+  micModeContainer: {
+    position: 'absolute',
+    bottom: SIZES.xl * 2, // 채팅창 아래에 위치
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  
+  // 마이크 모드일 때 중앙 정렬 - 챗 컨테이너 내부에 위치
+  micModeContainerInside: {
+    position: 'absolute',
+    bottom: SIZES.xl, // 챗 컨테이너 내부 하단에 위치
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  
+  // 마이크 버튼 크기 증가
+  micButtonLarge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FFB6C1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  
+  // 원본 입력창 스타일 (텍스트 입력 모드용) - 네비게이션 바 위로, 조금 아래로
+  inputContainerOriginal: {
+    position: 'absolute',
+    bottom: SIZES.xl * 2, // 조금 아래로 내림
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    paddingHorizontal: SIZES.lg,
+    paddingVertical: SIZES.md,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    backgroundColor: '#FFFFFF',
+  },
+  
+  // 입력 모드 토글 버튼 스타일 - 화면 상단 중앙에 고정, 수평 방향 토글 스위치 모양
+  inputModeToggle: {
+    position: 'absolute',
+    top: SIZES.xl * 2,
+    left: '50%',
+    transform: [{ translateX: -35 }], // 중앙 정렬을 위한 오프셋 (크기 줄임에 따라 조정)
+    zIndex: 9999, // 최고 우선순위
+    backgroundColor: '#FFFFFF',
+    width: 70, // 크기를 조금 줄임
+    height: 36, // 높이도 조금 줄임
+    borderRadius: 18, // 알약 모양 유지
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 10,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  
+  inputModeToggleText: {
+    color: '#333333',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  
+  // 토글 스위치 컨테이너
+  toggleSwitch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    height: '100%',
+    paddingHorizontal: 8,
+  },
+  
+  // 토글 스위치 손잡이 (움직이는 원형 부분) - 크기 줄임에 따라 조정
+  toggleHandle: {
+    position: 'absolute',
+    width: 28, // 크기를 조금 줄임
+    height: 28, // 크기를 조금 줄임
+    borderRadius: 14, // 원형 유지
+    backgroundColor: '#FFB6C1',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  
+  // 텍스트 전용 입력창 스타일 (마이크 버튼 없음) - 네비게이션 바 위로, 조금 아래로
+  inputContainerTextOnly: {
+    position: 'absolute',
+    bottom: SIZES.xl * 2, // 조금 아래로 내림
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    paddingHorizontal: SIZES.lg,
+    paddingVertical: SIZES.md,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    backgroundColor: '#FFFFFF',
+  },
+  
+  // 텍스트 전용 입력창 (마이크 버튼 없이 길게)
+  inputTextOnly: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 20,
+    paddingHorizontal: SIZES.lg,
+    paddingVertical: SIZES.md,
+    marginRight: SIZES.md,
+    fontSize: 16,
+    color: '#333333',
+    backgroundColor: '#F8F8F8',
+    minHeight: 50, // 입력창 높이 증가
+  },
 });
 
 export default ConversationScreen;

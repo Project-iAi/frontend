@@ -58,13 +58,8 @@ const KakaoLoginScreen = () => {
         };
         setUser(tempUser);
         
-        if (response.profileCompleted) {
-          // 프로필이 완료된 경우 컨셉 선택 화면으로 이동
-          setCurrentStep('concept');
-        } else {
-          // 프로필이 완료되지 않은 경우 회원가입 화면으로 이동
-          setCurrentStep('signup');
-        }
+        // 항상 회원가입 페이지로 이동 (프로필 완료 여부와 관계없이)
+        setCurrentStep('signup');
       } else {
         Alert.alert('오류', '카카오 로그인에 실패했습니다.');
       }

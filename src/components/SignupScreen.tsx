@@ -90,7 +90,7 @@ const SignupScreen = () => {
         child: {
           id: '1',
           name: childName,
-          gender: childGender === '남자' ? 'male' : 'female',
+          gender: (childGender === '남자' ? 'male' : childGender === '여자' ? 'female' : 'none') as 'male' | 'female' | 'none',
           age: parseInt(childAge, 10),
           interests: interestTags,
         },

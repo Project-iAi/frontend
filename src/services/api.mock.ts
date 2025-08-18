@@ -6,7 +6,7 @@ let roomAutoId = 1000;
 const roomIdToMessages: Record<number, ChatMessage[]> = {};
 const diaries: DiaryResponse[] = [] as any;
 
-const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 export const apiService = {
   createChatRoom: async (): Promise<ChatRoom> => {
@@ -14,7 +14,7 @@ export const apiService = {
     const id = ++roomAutoId;
     roomIdToMessages[id] = [
       {
-        id: Date.now(),
+        id: Date.now().toString(),
         roomId: id,
         userType: 'ai',
         content: '안녕하세요! 무엇을 이야기해볼까요?',
@@ -34,7 +34,7 @@ export const apiService = {
     const content = '오늘의 대화를 바탕으로 일기를 생성했어요. 모킹 데이터입니다.';
     const summary = '모킹 요약: 즐거운 대화';
     const diary: DiaryResponse = {
-      id: Date.now(),
+      id: Date.now().toString(),
       roomId,
       content,
       summary,
@@ -75,14 +75,14 @@ class MockSocket {
       const { roomId, text } = payload;
       const now = new Date();
       const userMsg: ChatMessage = {
-        id: Date.now() - 1,
+        id: Date.now().toString(),
         roomId,
         userType: 'user',
         content: text,
         createdAt: now,
       } as any;
       const aiMsg: SocketMessage = {
-        id: Date.now(),
+        id: Date.now().toString(),
         text: `AI 응답(모킹): ${text}`,
         sender: 'ai',
         type: 'text',
@@ -99,7 +99,7 @@ class MockSocket {
       const { roomId } = payload;
       const now = new Date();
       const aiMsg: SocketMessage = {
-        id: Date.now(),
+        id: Date.now().toString(),
         text: '음성 인식 결과(모킹): 안녕하세요',
         sender: 'ai',
         type: 'text',

@@ -295,6 +295,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: SIZES.lg,
     paddingVertical: SIZES.xl,
+    paddingBottom: SIZES.xl * 3, // 하단에 충분한 공백 추가
   },
   backButton: {
     position: 'absolute',
@@ -324,6 +325,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: SIZES.xl,
+    paddingBottom: SIZES.xl * 2, // 다이어리 카드 하단에 여백 추가
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

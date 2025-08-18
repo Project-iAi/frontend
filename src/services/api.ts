@@ -87,7 +87,7 @@ export interface ChatRoom {
 }
 
 export interface ChatMessage {
-  id: number;
+  id: string;
   roomId: number;
   userType: 'user' | 'ai';
   content: string;
@@ -95,7 +95,7 @@ export interface ChatMessage {
 }
 
 export interface DiaryResponse {
-  id: number;
+  id: string;
   roomId: number;
   content: string;
   summary: string;
@@ -104,7 +104,7 @@ export interface DiaryResponse {
 }
 
 export interface SocketMessage {
-  id: number;
+  id: string;
   text: string;
   sender: 'user' | 'ai';
   type: 'text' | 'voice';
