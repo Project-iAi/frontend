@@ -221,7 +221,10 @@ const CharacterScreen = () => {
   };
 
   const handleBack = () => {
+    console.log('🔙 뒤로가기 버튼 클릭됨');
+    console.log('현재 단계:', useAppStore.getState().currentStep);
     setCurrentStep('concept');
+    console.log('단계 변경 후:', useAppStore.getState().currentStep);
   };
 
   const handleCharacterSelect = (characterId: string) => {
@@ -591,13 +594,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: SIZES.xl * 1.5,
     left: SIZES.lg,
-    zIndex: 1,
-    width: 40,
-    height: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    borderRadius: 20,
+    zIndex: 999, // zIndex를 높게 설정
+    width: 44,
+    height: 44,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)', // 배경색을 더 진하게
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000', // 그림자 추가
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5, // Android 그림자
   },
   backButtonText: {
     fontSize: 20,

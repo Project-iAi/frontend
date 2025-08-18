@@ -66,45 +66,59 @@ const PhoneFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 const App = () => {
-  const { currentStep } = useAppStore();
+  try {
+    const { currentStep } = useAppStore();
 
-  const renderScreen = () => {
-    switch (currentStep) {
-      case 'onboarding':
+    const renderScreen = () => {
+      try {
+        switch (currentStep) {
+          case 'onboarding':
+            return <OnboardingScreen />;
+          case 'kakaoLogin':
+            return <KakaoLoginScreen />;
+          case 'signup':
+            return <SignupScreen />;
+          case 'concept':
+            return <ConceptScreen />;
+          case 'character':
+            return <CharacterScreen />;
+          case 'emotion':
+            return <CharacterScreen />; // emotion 케이스 추가
+          case 'conversation':
+            return <ConversationScreen />;
+          case 'diary':
+            return <DiaryScreen />;
+          case 'collection':
+            return <CollectionScreen />;
+          case 'diaryDetail':
+            return <DiaryDetailScreen />;
+          case 'chatHistory':
+            return <ChatHistoryScreen />;
+          case 'report':
+            return <ReportScreen />;
+          default:
+            console.log('Unknown step:', currentStep, 'falling back to onboarding');
+            return <OnboardingScreen />;
+        }
+      } catch (error) {
+        console.error('Error rendering screen:', error);
         return <OnboardingScreen />;
-      case 'kakaoLogin':
-        return <KakaoLoginScreen />;
-      case 'signup':
-        return <SignupScreen />;
-      case 'concept':
-        return <ConceptScreen />;
-      case 'character':
-        return <CharacterScreen />;
-      case 'conversation':
-        return <ConversationScreen />;
-      case 'diary':
-        return <DiaryScreen />;
-      case 'collection':
-        return <CollectionScreen />;
-      case 'diaryDetail':
-        return <DiaryDetailScreen />;
-      case 'chatHistory':
-        return <ChatHistoryScreen />;
-      case 'report':
-        return <ReportScreen />;
-      default:
-        return <OnboardingScreen />;
+      }
+    };
+
+    const content = renderScreen();
+    // iPad에서만 아이폰 프레임 적용
+    // iPad 호환 모드(아이폰 전용 빌드)에서는 Platform.isPad가 false가 되어 프레임이 적용되지 않습니다.
+    // iOS 전체에서 프레임을 적용하도록 변경합니다.
+    if (Platform.OS === 'ios') {
+      return <PhoneFrame>{content}</PhoneFrame>;
     }
-  };
-
-  const content = renderScreen();
-  // iPad에서만 아이폰 프레임 적용
-  // iPad 호환 모드(아이폰 전용 빌드)에서는 Platform.isPad가 false가 되어 프레임이 적용되지 않습니다.
-  // iOS 전체에서 프레임을 적용하도록 변경합니다.
-  if (Platform.OS === 'ios') {
-    return <PhoneFrame>{content}</PhoneFrame>;
+    return content;
+  } catch (error) {
+    console.error('Critical error in App component:', error);
+    // 최후의 수단으로 기본 화면 반환
+    return <OnboardingScreen />;
   }
-  return content;
 };
 
 export default App;

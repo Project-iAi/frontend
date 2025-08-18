@@ -66,7 +66,7 @@ export interface Conversation {
 
 // 결과 관련 타입
 export interface DiaryEntry {
-  id: number;
+  id: string;
   roomId: number;
   content: string; // 일기 내용
   summary: string; // 대화 요약

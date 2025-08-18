@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: screenHeight * 0.8, // 0.7 → 0.8로 세로 길이 더 증가
+    height: screenHeight * 0.7,
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
