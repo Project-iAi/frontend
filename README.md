@@ -83,32 +83,10 @@ src/
     └── index.ts
 ```
 
-## 🎨 개발 가이드
-
-### 이미지 추가
-
-이미지는 `src/assets/images/` 폴더에 추가하고 `src/assets/index.ts`에서 export하세요.
-
-### 상태 관리
-
-Zustand를 사용하여 앱의 전체 상태를 관리합니다. `src/store/useAppStore.ts`에서 확인할 수 있습니다.
-
-### 타입 정의
-
-모든 타입은 `src/types/index.ts`에 정의되어 있습니다.
-
 ## 📱 화면 플로우
 
 1. **온보딩** → 2. **회원가입** → 3. **컨셉 선택** → 4. **캐릭터 선택** → 5. **감정 선택** → 6. **대화** → 7. **그림일기** → 8. **결과 모음**
 
-## 🤝 기여하기
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-   
 
 ## 👥 팀
 
